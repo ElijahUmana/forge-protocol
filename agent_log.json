@@ -1,181 +1,158 @@
 {
   "version": "1.0.0",
   "agent": "Forge Protocol",
-  "generatedAt": "2026-03-23T02:55:06.899Z",
-  "runId": "forge-1774234377961",
-  "status": "completed",
+  "generatedAt": null,
+  "runId": "forge-1774235224589",
+  "status": "running",
   "targetRepo": "https://github.com/ElijahUmana/forge-protocol",
   "budget": {
     "maxTokens": 500000,
-    "usedTokens": 62271,
+    "usedTokens": 27252,
     "maxApiCalls": 100,
-    "usedApiCalls": 17,
+    "usedApiCalls": 12,
     "maxDurationMs": 1800000,
     "elapsedMs": 0,
-    "estimatedCostUSD": 0.560439
+    "estimatedCostUSD": 0.24526799999999999
   },
-  "totalSteps": 5,
-  "totalFindings": 14,
-  "totalLogEntries": 41,
-  "erc8004Txs": [
-    {
-      "type": "reputation_feedback",
-      "hash": "0xb125ca079359cc4a13485fb3cf01842c71e6bbfdd57fd8a5cb8e375296d24d9d",
-      "chain": "base-sepolia",
-      "status": "confirmed",
-      "timestamp": "2026-03-23T02:55:06.899Z",
-      "details": {
-        "agentId": 1,
-        "value": 95,
-        "tag": "audit_quality"
-      }
-    }
-  ],
+  "totalSteps": 4,
+  "totalFindings": 13,
+  "totalLogEntries": 26,
+  "erc8004Txs": [],
   "findings": [
     {
       "id": "finding-1",
       "severity": "critical",
-      "title": "Hardcoded API key reference in environment variable",
-      "description": "The Anthropic API key is accessed directly from process.env.ANTHROPIC_API_KEY without proper validation or fallback handling. If this environment variable is not set, the application will fail silently or crash.",
+      "title": "Hardcoded API Key Environment Variable Reference",
+      "description": "The Anthropic API key is referenced directly from environment variables without proper validation or fallback handling. If the environment variable is not set, the application will fail with potential information disclosure.",
       "file": "src/lib/agent-engine.ts",
       "line": 11,
-      "suggestion": "Add proper environment variable validation and consider using a secure configuration management system. Check if the API key exists before initializing the client.",
+      "suggestion": "Add proper environment variable validation and consider using a secure secrets management system. Validate the API key exists before creating the client instance.",
       "fixApplied": false
     },
     {
       "id": "finding-2",
       "severity": "critical",
-      "title": "Hardcoded private key reference in environment variable",
-      "description": "The private key for blockchain operations is accessed directly from process.env.AGENT_PRIVATE_KEY without validation. This is a critical security risk if the private key is exposed or not properly secured.",
+      "title": "Hardcoded Private Key Environment Variable Reference",
+      "description": "The agent private key is loaded directly from environment variables without validation. This could lead to application crashes or unexpected behavior if not properly set, and represents a critical security dependency.",
       "file": "src/lib/erc8004.ts",
-      "line": 17,
-      "suggestion": "Implement proper private key management using hardware security modules or secure key management services. Add validation to ensure the private key exists and is properly formatted.",
+      "line": 18,
+      "suggestion": "Implement proper validation for the AGENT_PRIVATE_KEY environment variable, use secure key management practices, and add error handling for missing or malformed keys.",
       "fixApplied": false
     },
     {
       "id": "finding-3",
       "severity": "high",
-      "title": "Missing input validation for GitHub repository parameters",
-      "description": "The GitHub tools accept owner and repo parameters without validation, which could lead to injection attacks or accessing unauthorized repositories.",
+      "title": "Insufficient Input Validation in GitHub Tool Functions",
+      "description": "The GitHub tool functions accept user input for owner, repo, and path parameters without proper validation. This could lead to injection attacks or unintended API calls to malicious repositories.",
       "file": "src/lib/agent-engine.ts",
-      "line": 68,
-      "suggestion": "Add input validation to ensure owner and repo parameters contain only valid GitHub repository name characters and implement sanitization.",
+      "line": 45,
+      "suggestion": "Add input validation and sanitization for GitHub repository parameters. Validate repository names, paths, and implement allowlists for trusted repositories.",
       "fixApplied": false
     },
     {
       "id": "finding-4",
       "severity": "high",
-      "title": "File system access without path validation",
-      "description": "The agent-log route reads files from the filesystem using user-controllable paths without proper validation, potentially allowing directory traversal attacks.",
+      "title": "Missing Rate Limiting on API Endpoints",
+      "description": "The /api/agent-log endpoint and other API routes lack rate limiting, which could lead to denial of service attacks or excessive resource consumption.",
       "file": "src/app/api/agent-log/route.ts",
-      "line": 6,
-      "suggestion": "Implement proper path validation and restrict file access to designated directories. Use path.resolve() and validate that the resolved path is within allowed directories.",
+      "line": null,
+      "suggestion": "Implement rate limiting middleware for all API endpoints using libraries like express-rate-limit or built-in Next.js rate limiting solutions.",
       "fixApplied": false
     },
     {
       "id": "finding-5",
       "severity": "high",
-      "title": "Exposed internal API endpoint without authentication",
-      "description": "The /api/agent-log endpoint exposes internal application logs without any authentication mechanism, potentially revealing sensitive information.",
+      "title": "Insecure File System Access",
+      "description": "The agent-log API endpoint reads files from the filesystem using user-controllable paths without proper validation, potentially leading to path traversal vulnerabilities.",
       "file": "src/app/api/agent-log/route.ts",
-      "line": 4,
-      "suggestion": "Implement authentication and authorization for the API endpoint. Consider using API keys, JWT tokens, or session-based authentication.",
+      "line": 6,
+      "suggestion": "Implement proper path validation and sanitization. Use path.resolve() and validate that the resolved path is within allowed directories.",
       "fixApplied": false
     },
     {
       "id": "finding-6",
       "severity": "medium",
-      "title": "Missing error handling in blockchain operations",
-      "description": "Blockchain operations in erc8004.ts don't have comprehensive error handling, which could lead to unhandled exceptions and information disclosure.",
+      "title": "Missing Error Handling in Blockchain Operations",
+      "description": "Blockchain operations in ERC8004 functions may throw unhandled exceptions, potentially exposing sensitive information about the system state or causing application crashes.",
       "file": "src/lib/erc8004.ts",
-      "line": 31,
-      "suggestion": "Implement try-catch blocks around blockchain operations and provide meaningful error messages without exposing sensitive details.",
+      "line": 37,
+      "suggestion": "Add comprehensive try-catch blocks around blockchain operations and implement proper error logging without exposing sensitive details to users.",
       "fixApplied": false
     },
     {
       "id": "finding-7",
       "severity": "medium",
-      "title": "Hardcoded blockchain addresses",
-      "description": "Smart contract addresses are hardcoded in the source code, making it difficult to update or use different environments securely.",
-      "file": "src/lib/erc8004.ts",
-      "line": 8,
-      "suggestion": "Move contract addresses to environment variables or a secure configuration system to allow for different environments and easier updates.",
+      "title": "Insecure HTTP Client for External API Calls",
+      "description": "The agent makes HTTP requests to external services without proper timeout, retry logic, or certificate validation, which could lead to hanging requests or man-in-the-middle attacks.",
+      "file": "src/app/api/agent-log/route.ts",
+      "line": 10,
+      "suggestion": "Implement proper HTTP client configuration with timeouts, retry policies, and certificate validation. Consider using a more robust HTTP client library.",
       "fixApplied": false
     },
     {
       "id": "finding-8",
       "severity": "medium",
-      "title": "Missing rate limiting on API endpoints",
-      "description": "The API endpoints don't implement rate limiting, which could lead to abuse, DoS attacks, or excessive resource consumption.",
-      "file": "src/app/api/agent-log/route.ts",
-      "line": 4,
-      "suggestion": "Implement rate limiting middleware using libraries like 'express-rate-limit' or Next.js middleware to prevent API abuse.",
+      "title": "Missing Input Sanitization in Agent Prompts",
+      "description": "User input is passed directly to AI model prompts without proper sanitization, which could lead to prompt injection attacks or unexpected model behavior.",
+      "file": "src/lib/agent-engine.ts",
+      "line": 13,
+      "suggestion": "Implement input sanitization and validation for all user-provided data before including it in AI prompts. Use parameterized prompts where possible.",
       "fixApplied": false
     },
     {
       "id": "finding-9",
-      "severity": "medium",
-      "title": "Insecure HTTP request in fallback logic",
-      "description": "The agent-log route makes an HTTP request to localhost without proper validation or timeout handling, which could lead to SSRF vulnerabilities.",
-      "file": "src/app/api/agent-log/route.ts",
-      "line": 12,
-      "suggestion": "Validate the localhost request, implement proper timeout handling, and consider using internal function calls instead of HTTP requests for local services.",
+      "severity": "low",
+      "title": "Verbose Error Messages",
+      "description": "Error handling in several functions may expose internal system information through verbose error messages, potentially aiding attackers in reconnaissance.",
+      "file": "src/lib/erc8004.ts",
+      "line": 144,
+      "suggestion": "Implement proper error handling that logs detailed errors internally but returns generic error messages to users.",
       "fixApplied": false
     },
     {
       "id": "finding-10",
       "severity": "low",
-      "title": "Missing TypeScript strict mode configurations",
-      "description": "While strict mode is enabled, additional TypeScript strict checks like noImplicitReturns and noUncheckedIndexedAccess are not configured.",
-      "file": "tsconfig.json",
-      "line": 7,
-      "suggestion": "Add additional TypeScript strict mode options like 'noImplicitReturns': true, 'noUncheckedIndexedAccess': true for better type safety.",
+      "title": "Missing Security Headers Configuration",
+      "description": "The Next.js configuration does not include security headers like CSP, HSTS, or X-Frame-Options, which could leave the application vulnerable to various client-side attacks.",
+      "file": "next.config.ts",
+      "line": null,
+      "suggestion": "Add security headers configuration in next.config.ts including Content Security Policy, HSTS, X-Frame-Options, and other relevant security headers.",
       "fixApplied": false
     },
     {
       "id": "finding-11",
-      "severity": "low",
-      "title": "Missing CORS configuration",
-      "description": "The Next.js configuration doesn't specify CORS headers, which could lead to security issues in cross-origin requests.",
-      "file": "next.config.ts",
-      "line": 3,
-      "suggestion": "Configure proper CORS headers in next.config.ts to restrict cross-origin requests to trusted domains.",
+      "severity": "info",
+      "title": "Missing TypeScript Strict Mode Configuration",
+      "description": "While strict mode is enabled, additional TypeScript strict checks could be enabled for better type safety and code quality.",
+      "file": "tsconfig.json",
+      "line": 7,
+      "suggestion": "Consider enabling additional strict TypeScript options like noUncheckedIndexedAccess, exactOptionalPropertyTypes, and noImplicitReturns for enhanced type safety.",
       "fixApplied": false
     },
     {
       "id": "finding-12",
       "severity": "info",
-      "title": "Missing security headers configuration",
-      "description": "The Next.js configuration doesn't include security headers like CSP, X-Frame-Options, or X-Content-Type-Options.",
-      "file": "next.config.ts",
-      "line": 3,
-      "suggestion": "Add security headers configuration in next.config.ts including Content Security Policy, X-Frame-Options, X-Content-Type-Options, and other security headers.",
+      "title": "Lack of Input Schema Validation",
+      "description": "The application defines input schemas but doesn't appear to validate incoming data against these schemas at runtime, which could lead to runtime errors.",
+      "file": "src/lib/types.ts",
+      "line": null,
+      "suggestion": "Implement runtime schema validation using libraries like Zod or Joi to ensure data integrity and type safety at application boundaries.",
       "fixApplied": false
     },
     {
       "id": "finding-13",
       "severity": "info",
-      "title": "No dependency vulnerability scanning",
-      "description": "The package.json doesn't include any security scanning tools or audit scripts to check for vulnerable dependencies.",
-      "file": "package.json",
-      "line": 1,
-      "suggestion": "Add npm audit scripts and consider integrating tools like Snyk or GitHub security alerts for continuous dependency vulnerability monitoring.",
-      "fixApplied": false
-    },
-    {
-      "id": "finding-14",
-      "severity": "info",
-      "title": "Missing logging and monitoring configuration",
-      "description": "The application lacks structured logging and monitoring setup which is important for security incident detection and debugging.",
+      "title": "Missing Logging Security Best Practices",
+      "description": "The logging system may inadvertently log sensitive information without proper sanitization or classification of log levels.",
       "file": "src/lib/logger.ts",
-      "line": 1,
-      "suggestion": "Implement structured logging with proper log levels, add monitoring and alerting capabilities, and ensure sensitive data is not logged.",
+      "line": 20,
+      "suggestion": "Implement log sanitization to prevent logging of sensitive data and add proper log level classification for security-related events.",
       "fixApplied": false
     }
   ],
   "entries": [
     {
-      "timestamp": "2026-03-23T02:52:57.961Z",
+      "timestamp": "2026-03-23T03:07:04.589Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Starting autonomous analysis pipeline",
@@ -187,7 +164,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:52:57.962Z",
+      "timestamp": "2026-03-23T03:07:04.589Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Agent orchestrator starting",
@@ -197,19 +174,19 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:04.997Z",
+      "timestamp": "2026-03-23T03:07:11.931Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 671,
+        "tokensUsed": 703,
         "contentBlocks": 1
       },
-      "tokensUsed": 671
+      "tokensUsed": 703
     },
     {
-      "timestamp": "2026-03-23T02:53:04.998Z",
+      "timestamp": "2026-03-23T03:07:11.931Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Beginning repository scan",
@@ -220,7 +197,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:07.351Z",
+      "timestamp": "2026-03-23T03:07:12.221Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_repo_contents",
@@ -231,7 +208,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:08.683Z",
+      "timestamp": "2026-03-23T03:07:13.459Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -242,7 +219,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:08.858Z",
+      "timestamp": "2026-03-23T03:07:13.692Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -253,7 +230,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:09.047Z",
+      "timestamp": "2026-03-23T03:07:13.877Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -264,7 +241,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:09.314Z",
+      "timestamp": "2026-03-23T03:07:14.139Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -275,18 +252,18 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:09.476Z",
+      "timestamp": "2026-03-23T03:07:14.357Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "path": "src/lib/erc8004.ts",
-        "size": 4110
+        "size": 5016
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:09.693Z",
+      "timestamp": "2026-03-23T03:07:14.553Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -297,7 +274,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:09.860Z",
+      "timestamp": "2026-03-23T03:07:14.745Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -308,7 +285,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:10.032Z",
+      "timestamp": "2026-03-23T03:07:14.929Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -319,7 +296,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:10.032Z",
+      "timestamp": "2026-03-23T03:07:14.929Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Analyzing 10 files for vulnerabilities",
@@ -340,29 +317,44 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:10.032Z",
+      "timestamp": "2026-03-23T03:07:14.929Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Agent scanner starting",
       "details": {
-        "inputLength": 17254
+        "inputLength": 18160
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:36.831Z",
+      "timestamp": "2026-03-23T03:07:40.678Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 7464,
+        "tokensUsed": 7663,
         "contentBlocks": 1
       },
-      "tokensUsed": 7464
+      "tokensUsed": 7663
     },
     {
-      "timestamp": "2026-03-23T02:53:36.831Z",
+      "timestamp": "2026-03-23T03:07:40.849Z",
+      "agent": "orchestrator",
+      "type": "reputation",
+      "action": "Trust gate check for Agent #2221",
+      "details": {
+        "trusted": true,
+        "score": -1,
+        "count": 0,
+        "reason": "Reputation check failed (network error) \u2014 proceeding with caution",
+        "agentId": 2221,
+        "threshold": 50
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T03:07:40.849Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Analyzing 3 critical findings",
@@ -376,29 +368,29 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:36.831Z",
+      "timestamp": "2026-03-23T03:07:40.849Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Agent analyzer starting",
       "details": {
-        "inputLength": 2067
+        "inputLength": 2134
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:39.613Z",
+      "timestamp": "2026-03-23T03:07:43.661Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 1343,
+        "tokensUsed": 1365,
         "contentBlocks": 2
       },
-      "tokensUsed": 1343
+      "tokensUsed": 1365
     },
     {
-      "timestamp": "2026-03-23T02:53:40.098Z",
+      "timestamp": "2026-03-23T03:07:43.961Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -409,26 +401,26 @@
           "path": "src/lib/agent-engine.ts"
         },
         "outputLength": 10029,
-        "durationMs": 485,
+        "durationMs": 300,
         "safe": true,
-        "guardrailCheck": "File truncated from 22462 to 10000 chars for safety"
+        "guardrailCheck": "File truncated from 28970 to 10000 chars for safety"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:42.172Z",
+      "timestamp": "2026-03-23T03:07:45.781Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 2)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 4242,
+        "tokensUsed": 4264,
         "contentBlocks": 1
       },
-      "tokensUsed": 4242
+      "tokensUsed": 4264
     },
     {
-      "timestamp": "2026-03-23T02:53:42.361Z",
+      "timestamp": "2026-03-23T03:07:45.987Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -438,27 +430,27 @@
           "repo": "forge-protocol",
           "path": "src/lib/erc8004.ts"
         },
-        "outputLength": 4110,
-        "durationMs": 189,
+        "outputLength": 5269,
+        "durationMs": 206,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:44.398Z",
+      "timestamp": "2026-03-23T03:07:48.999Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 3)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 5750,
+        "tokensUsed": 6106,
         "contentBlocks": 2
       },
-      "tokensUsed": 5750
+      "tokensUsed": 6106
     },
     {
-      "timestamp": "2026-03-23T02:53:44.854Z",
+      "timestamp": "2026-03-23T03:07:49.620Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "search_code",
@@ -466,238 +458,26 @@
         "input": {
           "owner": "ElijahUmana",
           "repo": "forge-protocol",
-          "query": "process.env.ANTHROPIC_API_KEY"
+          "query": "executeToolCall input validation"
         },
         "outputLength": 185,
-        "durationMs": 456,
+        "durationMs": 621,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T02:53:46.568Z",
+      "timestamp": "2026-03-23T03:08:13.367Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 4)",
       "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 5935,
-        "contentBlocks": 1
-      },
-      "tokensUsed": 5935
-    },
-    {
-      "timestamp": "2026-03-23T02:53:46.862Z",
-      "agent": "analyzer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "ElijahUmana",
-          "repo": "forge-protocol",
-          "query": "AGENT_PRIVATE_KEY"
-        },
-        "outputLength": 320,
-        "durationMs": 294,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:12.972Z",
-      "agent": "analyzer",
-      "type": "decision",
-      "action": "Claude response (iteration 5)",
-      "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 7172,
+        "tokensUsed": 7151,
         "contentBlocks": 1
       },
-      "tokensUsed": 7172
-    },
-    {
-      "timestamp": "2026-03-23T02:54:12.972Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Agent fixer starting",
-      "details": {
-        "inputLength": 2051
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:15.252Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 1)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 1338,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 1338
-    },
-    {
-      "timestamp": "2026-03-23T02:54:15.663Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "input": {
-          "owner": "ElijahUmana",
-          "repo": "forge-protocol",
-          "path": "src/lib/agent-engine.ts"
-        },
-        "outputLength": 10029,
-        "durationMs": 411,
-        "safe": true,
-        "guardrailCheck": "File truncated from 22462 to 10000 chars for safety"
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:17.780Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 2)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 4237,
-        "contentBlocks": 1
-      },
-      "tokensUsed": 4237
-    },
-    {
-      "timestamp": "2026-03-23T02:54:17.936Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "input": {
-          "owner": "ElijahUmana",
-          "repo": "forge-protocol",
-          "path": "src/lib/erc8004.ts"
-        },
-        "outputLength": 4110,
-        "durationMs": 156,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:20.546Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 3)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 5749,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 5749
-    },
-    {
-      "timestamp": "2026-03-23T02:54:20.820Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "ElijahUmana",
-          "repo": "forge-protocol",
-          "query": "process.env.ANTHROPIC_API_KEY"
-        },
-        "outputLength": 185,
-        "durationMs": 274,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:23.204Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 4)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 5938,
-        "contentBlocks": 1
-      },
-      "tokensUsed": 5938
-    },
-    {
-      "timestamp": "2026-03-23T02:54:23.830Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "ElijahUmana",
-          "repo": "forge-protocol",
-          "query": "process.env.AGENT_PRIVATE_KEY"
-        },
-        "outputLength": 170,
-        "durationMs": 626,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:53.433Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 5)",
-      "details": {
-        "stopReason": "end_turn",
-        "tokensUsed": 8566,
-        "contentBlocks": 1
-      },
-      "tokensUsed": 8566
-    },
-    {
-      "timestamp": "2026-03-23T02:54:53.433Z",
-      "agent": "reviewer",
-      "type": "decision",
-      "action": "Reviewing proposed fixes",
-      "details": {},
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:54:53.433Z",
-      "agent": "reviewer",
-      "type": "decision",
-      "action": "Agent reviewer starting",
-      "details": {
-        "inputLength": 10078
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T02:55:06.613Z",
-      "agent": "reviewer",
-      "type": "decision",
-      "action": "Claude response (iteration 1)",
-      "details": {
-        "stopReason": "end_turn",
-        "tokensUsed": 3866,
-        "contentBlocks": 1
-      },
-      "tokensUsed": 3866
-    },
-    {
-      "timestamp": "2026-03-23T02:55:06.614Z",
-      "agent": "orchestrator",
-      "type": "identity",
-      "action": "Attempting ERC-8004 reputation update",
-      "details": {
-        "agentAddress": "0xad114d421E106a845b196BdBe527A9dc4b7e8EF5"
-      },
-      "tokensUsed": 0
+      "tokensUsed": 7151
     }
   ]
 }
