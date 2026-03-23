@@ -650,38 +650,31 @@ Return ONLY the JSON object, no markdown.`,
         repoContent += `=== Repository Structure ===\n${fileList}\n\n`;
         logger.log("scanner", "tool_call", "fetch_repo_contents", { path: "/", fileCount: rootFiles.length });
 
-        // Identify key files to fetch
+        // Identify key files to fetch — handle ANY repo structure
+        const importantNames = ["package.json", "tsconfig.json", ".env.example", "next.config.ts", "next.config.js", "app.ts", "app.js", "server.ts", "server.js", "index.ts", "index.js", "config.ts", "config.js"];
         for (const f of rootFiles) {
-          if (["package.json", "tsconfig.json", ".env.example", "next.config.ts", "next.config.js"].includes(f.name)) {
+          if (importantNames.includes(f.name) || f.name.endsWith(".config.ts") || f.name.endsWith(".config.js")) {
             filesToFetch.push(f.path);
           }
         }
 
-        // Check src directory
-        const srcRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/src/lib`, { headers: ghHeaders });
-        if (srcRes.ok) {
-          const srcFiles = await srcRes.json();
-          for (const f of srcFiles) {
-            if (f.name.endsWith(".ts") || f.name.endsWith(".tsx")) {
-              filesToFetch.push(f.path);
-            }
-          }
-        }
-
-        // Also check API routes
-        const apiRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/src/app/api`, { headers: ghHeaders });
-        if (apiRes.ok) {
-          const apiDirs = await apiRes.json();
-          for (const d of apiDirs) {
-            if (d.type === "dir") {
-              const routeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${d.path}`, { headers: ghHeaders });
-              if (routeRes.ok) {
-                const routeFiles = await routeRes.json();
-                for (const rf of routeFiles) {
-                  if (rf.name === "route.ts") filesToFetch.push(rf.path);
+        // Check common source directories
+        const srcDirs = ["src", "src/lib", "src/app", "src/app/api", "lib", "routes", "server", "data", "models", "frontend/src"];
+        for (const dir of srcDirs) {
+          try {
+            const dirRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${dir}`, { headers: ghHeaders });
+            if (dirRes.ok) {
+              const dirFiles = await dirRes.json();
+              if (Array.isArray(dirFiles)) {
+                for (const f of dirFiles) {
+                  if (f.type === "file" && (f.name.endsWith(".ts") || f.name.endsWith(".js") || f.name.endsWith(".tsx") || f.name.endsWith(".jsx"))) {
+                    filesToFetch.push(f.path);
+                  }
                 }
               }
             }
+          } catch {
+            // Skip dirs that don't exist
           }
         }
       }
@@ -805,8 +798,12 @@ Using BOTH the code analysis AND the real CVE scan results above, identify ALL s
 9. Exposed debug endpoints or verbose error messages
 10. Insecure cryptographic practices
 
-Return ONLY a raw JSON array (no markdown code fences, no explanation).
-Each element: {"severity":"critical|high|medium|low|info","title":"...","description":"...","file":"...","line":null,"suggestion":"..."}`,
+CRITICAL INSTRUCTIONS:
+- Do NOT attempt to call any tools or functions. You do NOT have tool access.
+- Do NOT output any XML, function calls, or invoke tags.
+- Return ONLY a valid JSON array. Nothing else. No prose. No markdown. No code fences.
+- Start your response with [ and end with ]
+- Each element: {"severity":"critical|high|medium|low|info","title":"...","description":"...","file":"...","line":null,"suggestion":"..."}`,
       logger,
       false  // No tools — pure analysis
     );
