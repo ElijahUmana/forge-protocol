@@ -123,6 +123,9 @@ export default function Dashboard() {
   const [isRunning, setIsRunning] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "logs" | "findings" | "identity" | "history">("overview");
   const [runHistory, setRunHistory] = useState<{ repo: string; findings: number; critical: number; date: string; prUrl?: string }[]>([]);
+  const [auditSummary, setAuditSummary] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
 
   // Load history from localStorage + cached server results
   useEffect(() => {
@@ -130,14 +133,32 @@ export default function Dashboard() {
     fetch("/api/run").then(r => r.json()).then(data => {
       if (data.run?.findings?.length > 0) setRun(data.run);
     }).catch(() => {});
-    // Load saved history
+    // Load saved history + user name
     try {
       const saved = localStorage.getItem("forge-history");
       if (saved) setRunHistory(JSON.parse(saved));
+      const name = localStorage.getItem("forge-user");
+      if (name) setUserName(name);
+      else setShowNamePrompt(true);
     } catch { /* ignore */ }
   }, []);
 
-  // Save to history when a run completes
+  // Fetch AI summary + save to history when a run completes
+  useEffect(() => {
+    if (run?.status === "completed" && run.findings.length > 0 && !auditSummary) {
+      fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          findings: run.findings,
+          targetRepo: run.targetRepo,
+          steps: run.steps.length,
+          budget: run.budget,
+        }),
+      }).then(r => r.json()).then(d => setAuditSummary(d.summary)).catch(() => {});
+    }
+  }, [run?.status, run?.findings.length, auditSummary]);
+
   useEffect(() => {
     if (run?.status === "completed" && run.findings.length > 0) {
       const entry = {
@@ -212,6 +233,28 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100">
+      {/* User Name Prompt */}
+      {showNamePrompt && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center font-bold text-lg mb-4">F</div>
+            <h2 className="text-lg font-semibold mb-1">Welcome to Forge Protocol</h2>
+            <p className="text-xs text-zinc-500 mb-4">Autonomous security auditing with on-chain accountability. Enter your name to start a session.</p>
+            <input type="text" placeholder="Your name" autoFocus
+              className="w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-sm focus:outline-none focus:border-violet-500 mb-3"
+              onKeyDown={e => {
+                if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
+                  const name = (e.target as HTMLInputElement).value;
+                  setUserName(name);
+                  setShowNamePrompt(false);
+                  localStorage.setItem("forge-user", name);
+                }
+              }} />
+            <p className="text-[10px] text-zinc-600">Your session history will be saved locally.</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-zinc-800/50 px-6 py-3 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -397,16 +440,37 @@ export default function Dashboard() {
                         <p><span className="text-zinc-500">Most critical:</span> <span className="text-red-400">{run.findings.find(f => f.severity === "critical")?.title ?? run.findings[0]?.title}</span></p>
                       )}
                     </div>
-                    {/* PR Link */}
+                    {/* AI Summary */}
+                    {auditSummary && (
+                      <div className="p-3 rounded-lg bg-zinc-800/50 border border-zinc-700/50 mb-3">
+                        <div className="text-[10px] text-zinc-500 uppercase font-semibold mb-1">AI Audit Summary</div>
+                        <p className="text-xs text-zinc-300 leading-relaxed">{auditSummary}</p>
+                      </div>
+                    )}
+                    {!auditSummary && run.status === "completed" && (
+                      <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 mb-3 animate-pulse">
+                        <div className="text-[10px] text-zinc-600">Generating AI summary...</div>
+                      </div>
+                    )}
+                    {/* PR Link — Prominently displayed */}
                     {run.erc8004Txs?.some(tx => tx.chain === "github") && (
-                      <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
-                        <span className="text-blue-400 text-lg">&#128279;</span>
-                        <div className="flex-1">
-                          <div className="text-xs font-semibold text-blue-400">Pull Request Created</div>
-                          <a href={run.erc8004Txs.find(tx => tx.chain === "github")?.hash} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-300 hover:underline">
-                            {run.erc8004Txs.find(tx => tx.chain === "github")?.hash ?? "View PR"}
-                          </a>
+                      <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-green-500/10 border border-blue-500/20 mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl">&#9998;</div>
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-blue-400">Autonomous PR Created</div>
+                            <p className="text-[10px] text-zinc-500 mb-1">Security audit report committed to target repository</p>
+                            <a href={run.erc8004Txs.find(tx => tx.chain === "github")?.hash} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-blue-300 hover:text-blue-200 underline transition-colors">
+                              {run.erc8004Txs.find(tx => tx.chain === "github")?.hash ?? "View Pull Request"} &#8599;
+                            </a>
+                          </div>
                         </div>
+                      </div>
+                    )}
+                    {!run.erc8004Txs?.some(tx => tx.chain === "github") && (
+                      <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 mb-3">
+                        <div className="text-xs text-zinc-500">PR creation: awaiting pipeline completion on target repository</div>
                       </div>
                     )}
                     {/* On-chain proof links */}
@@ -636,20 +700,25 @@ export default function Dashboard() {
                 <div className="text-center py-12 text-zinc-600 text-sm">No audit history yet. Run an analysis to see results here.</div>
               ) : (
                 runHistory.map((h, i) => (
-                  <div key={i} className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 transition-all">
+                  <div key={i} className={`p-4 rounded-xl border transition-all ${h.prUrl ? "bg-blue-500/5 border-blue-500/20 hover:border-blue-500/30" : "bg-zinc-900/50 border-zinc-800/50 hover:border-zinc-700/50"}`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-zinc-300 truncate flex-1">{h.repo.replace("https://github.com/", "")}</span>
                       <span className="text-[10px] text-zinc-600 shrink-0 ml-3">{new Date(h.date).toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs">
+                    <div className="flex items-center gap-3 text-xs mb-2">
                       <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">{h.findings} findings</span>
                       {h.critical > 0 && <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-400">{h.critical} critical</span>}
-                      {h.prUrl && (
-                        <a href={h.prUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors">
-                          View PR &#8599;
-                        </a>
-                      )}
                     </div>
+                    {h.prUrl ? (
+                      <a href={h.prUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-xs">
+                        <span>&#9998;</span>
+                        <span className="font-medium">View Security Audit PR</span>
+                        <span className="ml-auto">&#8599;</span>
+                      </a>
+                    ) : (
+                      <div className="text-[10px] text-zinc-600">No PR created for this audit</div>
+                    )}
                   </div>
                 ))
               )}
