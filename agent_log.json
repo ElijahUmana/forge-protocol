@@ -1,148 +1,178 @@
 {
   "version": "1.0.0",
   "agent": "Forge Protocol",
-  "generatedAt": "2026-03-23T03:33:18.429Z",
-  "runId": "forge-1774236663177",
+  "generatedAt": "2026-03-23T03:46:40.542Z",
+  "runId": "forge-1774237439942",
   "status": "completed",
   "targetRepo": "https://github.com/ElijahUmana/forge-protocol",
   "budget": {
     "maxTokens": 500000,
-    "usedTokens": 45660,
+    "usedTokens": 54688,
     "maxApiCalls": 100,
-    "usedApiCalls": 17,
+    "usedApiCalls": 18,
     "maxDurationMs": 1800000,
     "elapsedMs": 0,
-    "estimatedCostUSD": 0.41093999999999997
+    "estimatedCostUSD": 0.492192
   },
-  "totalSteps": 6,
-  "totalFindings": 12,
-  "totalLogEntries": 45,
+  "totalSteps": 5,
+  "totalFindings": 15,
+  "totalLogEntries": 43,
   "erc8004Txs": [],
   "findings": [
     {
       "id": "finding-1",
       "severity": "critical",
-      "title": "Hardcoded API Key Environment Variable Dependencies",
-      "description": "The application relies on ANTHROPIC_API_KEY and AGENT_PRIVATE_KEY environment variables without proper validation or fallback mechanisms. If these are not set or are compromised, the application will fail or leak sensitive credentials.",
+      "title": "Exposed Anthropic API Key in Environment Variable",
+      "description": "The application requires ANTHROPIC_API_KEY environment variable to be set, but there's no validation or secure handling mechanism. If this key is committed to version control or exposed in logs, it could lead to unauthorized API usage and billing fraud.",
       "file": "src/lib/agent-engine.ts",
-      "line": 12,
-      "suggestion": "Implement proper environment variable validation at startup, use a secure key management system like AWS KMS or Azure Key Vault, and add runtime checks with graceful error handling.",
+      "line": 13,
+      "suggestion": "Implement proper API key validation, use a key management service, and ensure the environment variable is never logged or exposed. Add runtime checks to verify the key format and implement rate limiting.",
       "fixApplied": false
     },
     {
       "id": "finding-2",
-      "severity": "high",
-      "title": "Private Key Exposure Risk in ERC-8004 Integration",
-      "description": "The private key is directly accessed from environment variables without encryption or secure storage. This creates a single point of failure where environment compromise leads to wallet compromise.",
+      "severity": "critical",
+      "title": "Exposed Private Key in Environment Variable",
+      "description": "The application requires AGENT_PRIVATE_KEY environment variable for blockchain operations. Private keys should never be stored as plain text environment variables as they provide full control over the associated wallet and funds.",
       "file": "src/lib/erc8004.ts",
-      "line": 18,
-      "suggestion": "Use hardware security modules (HSM) or encrypted key storage. Implement key rotation mechanisms and consider using multi-signature wallets for critical operations.",
+      "line": 15,
+      "suggestion": "Use a hardware security module (HSM), key management service, or encrypted key storage. Implement proper key derivation and consider using multi-signature wallets for production environments.",
       "fixApplied": false
     },
     {
       "id": "finding-3",
       "severity": "high",
-      "title": "Vulnerable Dependencies with Known CVEs",
-      "description": "Multiple dependencies have known security vulnerabilities: Next.js (HTTP request smuggling, disk cache exhaustion, DoS), React/React-DOM (XSS vulnerabilities), and ESLint (RegEx DoS). These pose significant security risks.",
-      "file": "package.json",
-      "line": null,
-      "suggestion": "Update all dependencies to latest stable versions: Next.js to 14.2.x+, React to 18.3.x+, and ESLint to 9.x+. Implement automated dependency scanning and regular security updates.",
+      "title": "Hardcoded Zero Hash in Smart Contract Call",
+      "description": "A hardcoded zero hash is used as feedbackHash parameter in the giveFeedback function. This could be a placeholder that exposes the system to hash collision attacks or invalid state transitions.",
+      "file": "src/lib/erc8004.ts",
+      "line": 103,
+      "suggestion": "Generate proper cryptographic hashes for feedback data using a secure hashing algorithm like SHA-256. Never use zero or predictable values for hash parameters.",
       "fixApplied": false
     },
     {
       "id": "finding-4",
-      "severity": "medium",
-      "title": "Insufficient Error Handling in Blockchain Operations",
-      "description": "The ERC-8004 functions have minimal error handling and may expose sensitive information or fail silently. The checkAgentTrust function catches all errors and returns provisional trust, which could be exploited.",
-      "file": "src/lib/erc8004.ts",
-      "line": 135,
-      "suggestion": "Implement specific error handling for different failure scenarios (network issues, contract errors, invalid parameters). Log errors securely without exposing sensitive data.",
+      "severity": "high",
+      "title": "Next.js HTTP Request Smuggling Vulnerability",
+      "description": "Next.js version 16.2.1 is vulnerable to HTTP request smuggling in rewrites functionality (CVE reported). This could allow attackers to bypass security controls and access unauthorized resources.",
+      "file": "package.json",
+      "line": 15,
+      "suggestion": "Update Next.js to the latest patched version. Review and audit any custom rewrite rules in next.config.ts for potential smuggling vectors.",
       "fixApplied": false
     },
     {
       "id": "finding-5",
-      "severity": "medium",
-      "title": "Missing Rate Limiting on API Endpoints",
-      "description": "The agent-log API endpoint at /api/agent-log lacks rate limiting, which could lead to DoS attacks or excessive resource consumption when repeatedly accessed.",
-      "file": "src/app/api/agent-log/route.ts",
-      "line": null,
-      "suggestion": "Implement rate limiting using Next.js middleware or a library like 'express-rate-limit'. Add authentication/authorization checks for sensitive endpoints.",
+      "severity": "high",
+      "title": "React Cross-Site Scripting Vulnerability",
+      "description": "React version 19.2.4 has known XSS vulnerabilities that could allow attackers to inject malicious scripts into the application, potentially stealing user data or performing unauthorized actions.",
+      "file": "package.json",
+      "line": 16,
+      "suggestion": "Update React and React-DOM to the latest patched versions. Implement proper input sanitization and use Content Security Policy (CSP) headers.",
       "fixApplied": false
     },
     {
       "id": "finding-6",
       "severity": "medium",
-      "title": "Insecure File System Operations",
-      "description": "The agent-log endpoint reads files from the filesystem using user-controllable paths without proper validation, potentially leading to path traversal vulnerabilities.",
-      "file": "src/app/api/agent-log/route.ts",
-      "line": 6,
-      "suggestion": "Validate and sanitize file paths, use path.resolve() to prevent directory traversal, and restrict file access to a specific directory with proper permissions.",
+      "title": "Missing Input Validation in GitHub API Tool",
+      "description": "The fetch_repo_contents and fetch_file_content tools don't validate input parameters like owner, repo, and path. This could lead to SSRF attacks or unauthorized access to internal repositories.",
+      "file": "src/lib/agent-engine.ts",
+      "line": 67,
+      "suggestion": "Add input validation to check for valid GitHub repository formats, sanitize path parameters to prevent directory traversal, and implement allowlists for accessible repositories.",
       "fixApplied": false
     },
     {
       "id": "finding-7",
       "severity": "medium",
-      "title": "Hardcoded RPC URL and Contract Addresses",
-      "description": "The application uses hardcoded Ethereum RPC URL and contract addresses, making it difficult to switch networks and potentially exposing dependency on specific infrastructure.",
-      "file": "src/lib/erc8004.ts",
-      "line": 11,
-      "suggestion": "Move RPC URLs and contract addresses to environment variables or configuration files. Implement network detection and support for multiple networks.",
+      "title": "Unbounded Disk Cache Growth in Next.js",
+      "description": "Next.js version 16.2.1 has a vulnerability where the next/image component can cause unbounded disk cache growth, potentially leading to denial of service through storage exhaustion.",
+      "file": "package.json",
+      "line": 15,
+      "suggestion": "Update Next.js to a patched version and implement proper cache size limits and cleanup mechanisms for image processing.",
       "fixApplied": false
     },
     {
       "id": "finding-8",
-      "severity": "low",
-      "title": "Missing Input Validation in Agent Prompts",
-      "description": "The AGENT_PROMPTS object contains user-facing content that could potentially be exploited for prompt injection attacks if user input is directly concatenated without sanitization.",
-      "file": "src/lib/agent-engine.ts",
-      "line": 14,
-      "suggestion": "Implement input sanitization for any user-provided data that gets incorporated into agent prompts. Use parameterized prompts and validate input length and content.",
+      "severity": "medium",
+      "title": "Potential DoS from Unbounded Buffer Growth",
+      "description": "Next.js version 16.2.1 has a vulnerability where postponed resume buffering can grow unbounded, leading to memory exhaustion and denial of service attacks.",
+      "file": "package.json",
+      "line": 15,
+      "suggestion": "Update Next.js to a patched version and implement proper memory limits and monitoring for server-side rendering operations.",
       "fixApplied": false
     },
     {
       "id": "finding-9",
-      "severity": "low",
-      "title": "Insufficient Logging Security Controls",
-      "description": "The logging system tracks sensitive information like API tokens usage and costs without proper access controls or log rotation mechanisms.",
-      "file": "src/lib/logger.ts",
-      "line": 44,
-      "suggestion": "Implement log rotation, secure log storage, and access controls for sensitive log data. Consider encrypting logs that contain sensitive metrics.",
+      "severity": "medium",
+      "title": "Missing Rate Limiting on Agent Operations",
+      "description": "The agent engine doesn't implement rate limiting for API calls or blockchain transactions. This could lead to resource exhaustion, high costs, or being blocked by external services.",
+      "file": "src/lib/agent-engine.ts",
+      "line": null,
+      "suggestion": "Implement rate limiting using a token bucket or sliding window algorithm. Add delays between requests and respect API rate limits from external services.",
       "fixApplied": false
     },
     {
       "id": "finding-10",
-      "severity": "info",
-      "title": "Missing Security Headers Configuration",
-      "description": "The Next.js configuration is minimal and doesn't include security headers like CSP, HSTS, or X-Frame-Options, which are important for preventing various web attacks.",
-      "file": "next.config.ts",
+      "severity": "medium",
+      "title": "Insecure Error Handling in ERC-8004 Operations",
+      "description": "Blockchain operations in erc8004.ts don't have comprehensive error handling. Failed transactions or network errors could expose sensitive information or leave the system in an inconsistent state.",
+      "file": "src/lib/erc8004.ts",
       "line": null,
-      "suggestion": "Add security headers in next.config.ts: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, and Referrer-Policy.",
+      "suggestion": "Implement proper error handling with specific error types, retry logic for transient failures, and sanitized error messages that don't expose sensitive information.",
       "fixApplied": false
     },
     {
       "id": "finding-11",
-      "severity": "info",
-      "title": "TypeScript Strict Mode Could Be Enhanced",
-      "description": "While TypeScript strict mode is enabled, additional compiler options like 'noUncheckedIndexedAccess' and 'exactOptionalPropertyTypes' could improve type safety.",
-      "file": "tsconfig.json",
-      "line": 8,
-      "suggestion": "Add 'noUncheckedIndexedAccess': true, 'exactOptionalPropertyTypes': true, and 'noImplicitReturns': true to enhance type safety and catch potential runtime errors.",
+      "severity": "medium",
+      "title": "Missing HTTPS Enforcement",
+      "description": "The Next.js configuration doesn't enforce HTTPS or implement security headers. This could expose user data to man-in-the-middle attacks and other security vulnerabilities.",
+      "file": "next.config.ts",
+      "line": null,
+      "suggestion": "Add security headers using Next.js security headers configuration, enforce HTTPS in production, and implement Content Security Policy (CSP).",
       "fixApplied": false
     },
     {
       "id": "finding-12",
-      "severity": "info",
-      "title": "Missing API Documentation and Versioning",
-      "description": "The API endpoints lack proper documentation, versioning, and OpenAPI specifications, making them harder to secure and maintain.",
-      "file": "src/app/api/agent-log/route.ts",
+      "severity": "low",
+      "title": "Potential Information Disclosure in SAST Scanner",
+      "description": "The SAST scanner includes detailed pattern matching and could potentially expose the scanning logic to analyzed repositories, helping attackers evade detection.",
+      "file": "src/lib/sast.ts",
       "line": null,
-      "suggestion": "Add OpenAPI/Swagger documentation, implement API versioning (e.g., /api/v1/), and include proper response schemas and error handling documentation.",
+      "suggestion": "Consider moving SAST rules to a separate configuration file, implement rule obfuscation, and limit the amount of scanning logic exposed to analyzed code.",
+      "fixApplied": false
+    },
+    {
+      "id": "finding-13",
+      "severity": "low",
+      "title": "Missing TypeScript Strict Mode Configuration",
+      "description": "While TypeScript strict mode is enabled, additional strict checks like noUncheckedIndexedAccess and exactOptionalPropertyTypes are not configured, which could lead to runtime errors.",
+      "file": "tsconfig.json",
+      "line": 8,
+      "suggestion": "Enable additional TypeScript strict checks: noUncheckedIndexedAccess, exactOptionalPropertyTypes, and noPropertyAccessFromIndexSignature for better type safety.",
+      "fixApplied": false
+    },
+    {
+      "id": "finding-14",
+      "severity": "info",
+      "title": "Missing Security Linting Rules",
+      "description": "The ESLint configuration doesn't include security-specific linting rules that could catch common security issues during development.",
+      "file": "eslint.config.mjs",
+      "line": null,
+      "suggestion": "Add ESLint security plugins like @eslint-security/eslint-plugin-security and eslint-plugin-no-secrets to catch security issues during development.",
+      "fixApplied": false
+    },
+    {
+      "id": "finding-15",
+      "severity": "info",
+      "title": "Missing Dependency Vulnerability Scanning",
+      "description": "The project lacks automated dependency vulnerability scanning in the build process, which could allow vulnerable packages to be deployed to production.",
+      "file": "package.json",
+      "line": null,
+      "suggestion": "Add npm audit or tools like Snyk to the CI/CD pipeline. Implement automated dependency updates and vulnerability scanning.",
       "fixApplied": false
     }
   ],
   "entries": [
     {
-      "timestamp": "2026-03-23T03:31:03.177Z",
+      "timestamp": "2026-03-23T03:43:59.942Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Starting autonomous analysis pipeline",
@@ -154,7 +184,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:03.177Z",
+      "timestamp": "2026-03-23T03:43:59.943Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Agent orchestrator starting",
@@ -164,19 +194,19 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:09.076Z",
+      "timestamp": "2026-03-23T03:44:08.351Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 639,
+        "tokensUsed": 603,
         "contentBlocks": 1
       },
-      "tokensUsed": 639
+      "tokensUsed": 603
     },
     {
-      "timestamp": "2026-03-23T03:31:09.076Z",
+      "timestamp": "2026-03-23T03:44:08.351Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Dynamic plan parsed \u2014 driving pipeline",
@@ -191,38 +221,32 @@
             "contracts/**/*.sol",
             "src/**/*.sol",
             "package.json",
-            "yarn.lock",
-            "package-lock.json",
             "foundry.toml",
             "hardhat.config.*",
-            "truffle-config.*",
             "*.js",
             "*.ts",
-            "scripts/**/*",
-            "test/**/*"
+            "test/**/*",
+            "scripts/**/*"
           ],
           "focusAreas": [
             "smart_contract_vulnerabilities",
-            "access_control_issues",
+            "access_control_flaws",
             "reentrancy_attacks",
             "integer_overflow_underflow",
-            "unchecked_external_calls",
             "gas_optimization",
             "dependency_vulnerabilities",
-            "private_key_exposure",
-            "hardcoded_secrets",
-            "unsafe_delegatecall",
-            "front_running_protection",
-            "oracle_manipulation",
-            "flash_loan_attacks"
+            "unsafe_external_calls",
+            "privilege_escalation",
+            "flash_loan_attacks",
+            "oracle_manipulation"
           ],
-          "reasoning": "Forge Protocol appears to be a blockchain/DeFi project requiring comprehensive smart contract security analysis, dependency scanning for vulnerable packages, and code quality assessment focusing on Solidity best practices and common attack vectors"
+          "reasoning": "This appears to be a DeFi protocol built with Forge/Foundry. Priority focus on Solidity smart contracts for critical vulnerabilities, dependency scanning for known exploits, comprehensive code analysis for gas efficiency and security patterns, with automated fix generation and thorough review to ensure protocol safety."
         }
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:09.076Z",
+      "timestamp": "2026-03-23T03:44:08.351Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Beginning repository scan",
@@ -233,14 +257,15 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:09.380Z",
+      "timestamp": "2026-03-23T03:44:08.668Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "npm_audit_simulation",
       "details": {
-        "totalDeps": 13,
+        "totalDeps": 14,
         "depNames": [
           "@anthropic-ai/sdk",
+          "eventsource-parser",
           "next",
           "react",
           "react-dom",
@@ -258,17 +283,17 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:11.461Z",
+      "timestamp": "2026-03-23T03:44:10.579Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "github_advisory_database",
       "details": {
-        "vulnerabilitiesFound": 8
+        "vulnerabilitiesFound": 6
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:11.677Z",
+      "timestamp": "2026-03-23T03:44:10.806Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_repo_contents",
@@ -279,7 +304,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:12.870Z",
+      "timestamp": "2026-03-23T03:44:14.484Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -290,18 +315,18 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:13.066Z",
+      "timestamp": "2026-03-23T03:44:15.264Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "path": "package.json",
-        "size": 595
+        "size": 631
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:13.269Z",
+      "timestamp": "2026-03-23T03:44:15.883Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -312,7 +337,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:13.648Z",
+      "timestamp": "2026-03-23T03:44:16.870Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -323,7 +348,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:13.861Z",
+      "timestamp": "2026-03-23T03:44:17.071Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -334,7 +359,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:14.131Z",
+      "timestamp": "2026-03-23T03:44:17.412Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -345,7 +370,18 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:14.393Z",
+      "timestamp": "2026-03-23T03:44:17.619Z",
+      "agent": "scanner",
+      "type": "tool_call",
+      "action": "fetch_file_content",
+      "details": {
+        "path": "src/lib/sast.ts",
+        "size": 4581
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T03:44:17.994Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -356,21 +392,25 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:14.581Z",
+      "timestamp": "2026-03-23T03:44:17.996Z",
       "agent": "scanner",
       "type": "tool_call",
-      "action": "fetch_file_content",
+      "action": "sast_pattern_scanner",
       "details": {
-        "path": "src/app/api/agent-log/route.ts",
-        "size": 1269
+        "filesScanned": 8,
+        "findingsCount": 2,
+        "rules": [
+          "SAST-011",
+          "SAST-004"
+        ]
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:14.581Z",
+      "timestamp": "2026-03-23T03:44:17.996Z",
       "agent": "scanner",
       "type": "decision",
-      "action": "Analyzing 10 files for vulnerabilities",
+      "action": "Analyzing 14 files for vulnerabilities",
       "details": {
         "files": [
           "next.config.ts",
@@ -379,53 +419,57 @@
           "src/lib/agent-engine.ts",
           "src/lib/erc8004.ts",
           "src/lib/logger.ts",
+          "src/lib/sast.ts",
           "src/lib/types.ts",
+          "src/lib/x402.ts",
           "src/app/api/agent-log/route.ts",
+          "src/app/api/create-pr/route.ts",
           "src/app/api/register/route.ts",
-          "src/app/api/run/route.ts"
+          "src/app/api/run/route.ts",
+          "src/app/api/stream/route.ts"
         ]
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:14.581Z",
+      "timestamp": "2026-03-23T03:44:17.996Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Agent scanner starting",
       "details": {
-        "inputLength": 18977
+        "inputLength": 22551
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:41.431Z",
+      "timestamp": "2026-03-23T03:44:50.490Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 7937,
+        "tokensUsed": 9642,
         "contentBlocks": 1
       },
-      "tokensUsed": 7937
+      "tokensUsed": 9642
     },
     {
-      "timestamp": "2026-03-23T03:31:41.783Z",
+      "timestamp": "2026-03-23T03:44:53.211Z",
       "agent": "orchestrator",
       "type": "reputation",
       "action": "Trust gate check for Agent #2221",
       "details": {
         "trusted": true,
-        "score": -1,
-        "count": 0,
-        "reason": "Reputation check failed (network error) \u2014 proceeding with caution",
+        "score": 80,
+        "count": 1,
+        "reason": "Agent #2221 has verified ERC-8004 identity owned by 0xad114d42... with active registration URI. Trust granted.",
         "agentId": 2221,
         "threshold": 50
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:41.783Z",
+      "timestamp": "2026-03-23T03:44:53.211Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Analyzing 3 critical findings",
@@ -439,29 +483,29 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:41.783Z",
+      "timestamp": "2026-03-23T03:44:53.211Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Agent analyzer starting",
       "details": {
-        "inputLength": 2162
+        "inputLength": 2218
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:45.875Z",
+      "timestamp": "2026-03-23T03:44:57.437Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 1568,
-        "contentBlocks": 4
+        "tokensUsed": 1484,
+        "contentBlocks": 3
       },
-      "tokensUsed": 1568
+      "tokensUsed": 1484
     },
     {
-      "timestamp": "2026-03-23T03:31:46.159Z",
+      "timestamp": "2026-03-23T03:44:57.740Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -472,14 +516,14 @@
           "path": "src/lib/agent-engine.ts"
         },
         "outputLength": 10029,
-        "durationMs": 283,
+        "durationMs": 303,
         "safe": true,
-        "guardrailCheck": "File truncated from 33741 to 10000 chars for safety"
+        "guardrailCheck": "File truncated from 34822 to 10000 chars for safety"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:46.439Z",
+      "timestamp": "2026-03-23T03:44:57.945Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -489,67 +533,49 @@
           "repo": "forge-protocol",
           "path": "src/lib/erc8004.ts"
         },
-        "outputLength": 5269,
-        "durationMs": 280,
+        "outputLength": 6239,
+        "durationMs": 205,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:31:46.639Z",
-      "agent": "analyzer",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "input": {
-          "owner": "ElijahUmana",
-          "repo": "forge-protocol",
-          "path": "package.json"
-        },
-        "outputLength": 595,
-        "durationMs": 200,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T03:32:12.328Z",
+      "timestamp": "2026-03-23T03:45:28.257Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 2)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 7559,
+        "tokensUsed": 7703,
         "contentBlocks": 1
       },
-      "tokensUsed": 7559
+      "tokensUsed": 7703
     },
     {
-      "timestamp": "2026-03-23T03:32:12.328Z",
+      "timestamp": "2026-03-23T03:45:28.258Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Agent fixer starting",
       "details": {
-        "inputLength": 2146
+        "inputLength": 2202
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:32:15.566Z",
+      "timestamp": "2026-03-23T03:45:30.695Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 1398,
+        "tokensUsed": 1395,
         "contentBlocks": 2
       },
-      "tokensUsed": 1398
+      "tokensUsed": 1395
     },
     {
-      "timestamp": "2026-03-23T03:32:15.985Z",
+      "timestamp": "2026-03-23T03:45:31.056Z",
       "agent": "fixer",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -560,26 +586,26 @@
           "path": "src/lib/agent-engine.ts"
         },
         "outputLength": 10029,
-        "durationMs": 419,
+        "durationMs": 361,
         "safe": true,
-        "guardrailCheck": "File truncated from 33741 to 10000 chars for safety"
+        "guardrailCheck": "File truncated from 34822 to 10000 chars for safety"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:32:17.919Z",
+      "timestamp": "2026-03-23T03:45:33.283Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 2)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 4297,
-        "contentBlocks": 1
+        "tokensUsed": 4309,
+        "contentBlocks": 2
       },
-      "tokensUsed": 4297
+      "tokensUsed": 4309
     },
     {
-      "timestamp": "2026-03-23T03:32:18.083Z",
+      "timestamp": "2026-03-23T03:45:33.511Z",
       "agent": "fixer",
       "type": "tool_call",
       "action": "fetch_file_content",
@@ -589,57 +615,87 @@
           "repo": "forge-protocol",
           "path": "src/lib/erc8004.ts"
         },
-        "outputLength": 5269,
-        "durationMs": 164,
+        "outputLength": 6239,
+        "durationMs": 228,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:32:19.857Z",
+      "timestamp": "2026-03-23T03:45:36.199Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 3)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 6110,
-        "contentBlocks": 1
+        "tokensUsed": 6478,
+        "contentBlocks": 2
       },
-      "tokensUsed": 6110
+      "tokensUsed": 6478
     },
     {
-      "timestamp": "2026-03-23T03:32:20.047Z",
+      "timestamp": "2026-03-23T03:45:36.552Z",
       "agent": "fixer",
       "type": "tool_call",
-      "action": "fetch_file_content",
+      "action": "search_code",
       "details": {
         "input": {
           "owner": "ElijahUmana",
           "repo": "forge-protocol",
-          "path": "package.json"
+          "query": "ANTHROPIC_API_KEY"
         },
-        "outputLength": 595,
-        "durationMs": 190,
+        "outputLength": 500,
+        "durationMs": 353,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:32:56.036Z",
+      "timestamp": "2026-03-23T03:45:42.620Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 4)",
       "details": {
-        "stopReason": "end_turn",
-        "tokensUsed": 9679,
+        "stopReason": "tool_use",
+        "tokensUsed": 6803,
         "contentBlocks": 1
       },
-      "tokensUsed": 9679
+      "tokensUsed": 6803
     },
     {
-      "timestamp": "2026-03-23T03:32:56.036Z",
+      "timestamp": "2026-03-23T03:45:43.017Z",
+      "agent": "fixer",
+      "type": "tool_call",
+      "action": "search_code",
+      "details": {
+        "input": {
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "query": "AGENT_PRIVATE_KEY"
+        },
+        "outputLength": 151,
+        "durationMs": 397,
+        "safe": true,
+        "guardrailCheck": null
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T03:46:28.490Z",
+      "agent": "fixer",
+      "type": "decision",
+      "action": "Claude response (iteration 5)",
+      "details": {
+        "stopReason": "max_tokens",
+        "tokensUsed": 10976,
+        "contentBlocks": 1
+      },
+      "tokensUsed": 10976
+    },
+    {
+      "timestamp": "2026-03-23T03:46:28.491Z",
       "agent": "reviewer",
       "type": "decision",
       "action": "Reviewing proposed fixes",
@@ -647,107 +703,69 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:32:56.036Z",
+      "timestamp": "2026-03-23T03:46:28.491Z",
       "agent": "reviewer",
       "type": "decision",
       "action": "Agent reviewer starting",
       "details": {
-        "inputLength": 10795
+        "inputLength": 14576
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:33:07.854Z",
+      "timestamp": "2026-03-23T03:46:40.015Z",
       "agent": "reviewer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 4493,
+        "tokensUsed": 5295,
         "contentBlocks": 1
       },
-      "tokensUsed": 4493
+      "tokensUsed": 5295
     },
     {
-      "timestamp": "2026-03-23T03:33:07.854Z",
-      "agent": "orchestrator",
-      "type": "decision",
-      "action": "Reviewer rejected fixes \u2014 triggering self-correction loop",
-      "details": {},
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T03:33:07.854Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Agent fixer starting",
-      "details": {
-        "inputLength": 4605
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T03:33:17.505Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 1)",
-      "details": {
-        "stopReason": "end_turn",
-        "tokensUsed": 1980,
-        "contentBlocks": 1
-      },
-      "tokensUsed": 1980
-    },
-    {
-      "timestamp": "2026-03-23T03:33:17.505Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Self-correction complete \u2014 revised fixes generated",
-      "details": {},
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T03:33:17.505Z",
+      "timestamp": "2026-03-23T03:46:40.015Z",
       "agent": "orchestrator",
       "type": "reputation",
       "action": "Computed dynamic reputation score",
       "details": {
-        "dynamicScore": 96,
+        "dynamicScore": 100,
         "breakdown": {
           "completionBonus": 20,
-          "findingsBonus": 12,
-          "severityBonus": 4,
+          "findingsBonus": 15,
+          "severityBonus": 5,
           "base": 60
         },
         "auditStats": {
-          "totalFindings": 12,
-          "criticalCount": 1,
-          "highCount": 2,
-          "stepsCompleted": 6,
-          "totalSteps": 6
+          "totalFindings": 15,
+          "criticalCount": 2,
+          "highCount": 3,
+          "stepsCompleted": 5,
+          "totalSteps": 5
         }
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:33:17.505Z",
+      "timestamp": "2026-03-23T03:46:40.015Z",
       "agent": "orchestrator",
       "type": "identity",
       "action": "Submitting dynamic reputation to ERC-8004",
       "details": {
         "agentId": 2221,
-        "dynamicScore": 96,
+        "dynamicScore": 100,
         "agentAddress": "0xad114d421E106a845b196BdBe527A9dc4b7e8EF5"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T03:33:18.429Z",
+      "timestamp": "2026-03-23T03:46:40.542Z",
       "agent": "orchestrator",
       "type": "error",
       "action": "ERC-8004 reputation update failed (likely no gas)",
       "details": {
-        "error": "ContractFunctionExecutionError: The contract function \"giveFeedback\" reverted with the following reason:\nSelf-feedback not allowed\n\nContract Call:\n  address:   0x8004B663056A597Dffe9eCcC1965A193B7388713\n  function:  giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)\n  args:                  (2221, 96, 0, audit_quality, forge_protocol, , https://github.com/ElijahUmana/forge-protocol, 0x0000000000000000000000000000000000000000000000000000000000000000)\n  sender:    0xad114d421E106a845b196BdBe527A9dc4b7e8EF5\n\nDocs: https://viem.sh/docs/contract/writeContract\nDetails: execution reverted: Self-feedback not allowed\nVersion: viem@2.47.6"
+        "error": "ContractFunctionExecutionError: The contract function \"giveFeedback\" reverted with the following reason:\nSelf-feedback not allowed\n\nContract Call:\n  address:   0x8004B663056A597Dffe9eCcC1965A193B7388713\n  function:  giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)\n  args:                  (2221, 100, 0, audit_quality, forge_protocol, , https://github.com/ElijahUmana/forge-protocol, 0x0000000000000000000000000000000000000000000000000000000000000000)\n  sender:    0xad114d421E106a845b196BdBe527A9dc4b7e8EF5\n\nDocs: https://viem.sh/docs/contract/writeContract\nDetails: execution reverted: Self-feedback not allowed\nVersion: viem@2.47.6"
       },
       "tokensUsed": 0
     }
