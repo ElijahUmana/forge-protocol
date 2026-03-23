@@ -1,70 +1,176 @@
 # Forge Protocol
 
-**Autonomous Multi-Agent Security Auditor with ERC-8004 On-Chain Trust**
+**Autonomous Multi-Agent Security Auditor with ERC-8004 Trust, x402 Payments, and Real SAST Tooling**
 
-Forge Protocol is a fully autonomous multi-agent system that discovers, analyzes, and fixes security vulnerabilities in GitHub repositories. Five specialized AI agents coordinate through a trust-gated pipeline, with all identities and reputation tracked on-chain via ERC-8004.
+Forge Protocol is a fully autonomous system that discovers, analyzes, and fixes security vulnerabilities in any GitHub repository. It combines deterministic security tools (Semgrep, custom SAST, GitHub Advisory Database) with AI reasoning (Claude), all coordinated through ERC-8004 on-chain trust and inter-agent message passing.
+
+**Live demo:** https://forge-protocol-eight.vercel.app
+**Synthesis Agent #35843** (Base Mainnet) | **ERC-8004 Agent #2221** (Ethereum Sepolia)
 
 ---
 
-## The Problem
+## Why This Exists
 
-Open-source repositories accumulate security vulnerabilities faster than human reviewers can find them. Manual security audits are expensive, slow, and inconsistent. Meanwhile, AI-powered tools lack accountability — there's no way to verify an automated auditor's track record or trustworthiness.
+Automated security auditing today has a trust problem. Tools like Semgrep and CodeQL find real bugs, but they can't reason about business logic, understand context, or propose fixes. LLM-based tools can reason, but hallucinate vulnerabilities and have no accountability. Nobody can verify whether an automated auditor is actually reliable.
 
-## The Solution: Autonomous Agent Swarm + On-Chain Trust
+Forge Protocol solves this by combining the best of both worlds:
 
-Forge Protocol deploys five specialized AI agents in an autonomous pipeline:
+1. **Deterministic tools** (Semgrep, custom SAST, CVE databases) provide ground truth
+2. **AI agents** (Claude) provide contextual reasoning, deep analysis, and fix generation
+3. **ERC-8004 on-chain identity** creates verifiable, accountable auditor reputation
+4. **Trust-gating** ensures agents verify each other before accepting results
+5. **x402 micropayments** enable agent-to-agent commerce for audit services
 
-| Agent | Role | Capabilities |
-|-------|------|-------------|
-| **Orchestrator** | Task decomposition & delegation | Planning, coordination, progress tracking |
-| **Scanner** | Repository discovery & issue detection | GitHub API, code search, pattern matching |
-| **Analyzer** | Deep vulnerability analysis | Static analysis, CWE mapping, impact assessment |
-| **Fixer** | Code fix generation | Code generation, refactoring, minimal diffs |
-| **Reviewer** | Fix verification & QA | Code review, regression checks, approval gates |
-
-### How It Works
-
-1. **Discover** — Scanner agent explores the repository structure via GitHub API
-2. **Plan** — Orchestrator decomposes the analysis into subtasks
-3. **Execute** — Scanner identifies issues, Analyzer performs deep analysis, Fixer generates patches
-4. **Verify** — Reviewer validates all fixes before they're applied
-5. **Record** — All decisions, tool calls, and outcomes logged to `agent_log.json`
-
-**No human intervention required.** The agents operate autonomously from start to finish.
-
-### Trust via ERC-8004
-
-Every agent registers an on-chain identity via [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) on Base Sepolia:
-
-- **Identity Registry** — Each agent has a unique ERC-721 token with capability metadata
-- **Reputation Registry** — Audit quality scores recorded after each run
-- **Validation Registry** — Third-party verification of agent behavior
-
-Agents check each other's reputation before trusting outputs. The Reviewer won't skip reviewing the Fixer's code. The Orchestrator won't delegate critical tasks to low-reputation agents.
+The result: a multi-agent system where every finding is backed by real tooling, every agent is accountable on-chain, and every audit builds verifiable reputation.
 
 ---
 
 ## Architecture
 
 ```
-                    NEXT.JS DASHBOARD
-    Repository Input -> Live Pipeline -> Findings
-    Execution Logs | Budget Tracker | Identity Panel
-                         |
-                  AGENT ENGINE (TypeScript)
-                         |
-    Orchestrator -> Scanner -> Analyzer -> Fixer -> Reviewer
-    (autonomous pipeline with tool use)
-                         |
-           +-------------+-------------+
-           |             |             |
-        GitHub        Claude       ERC-8004
-         API           API       (Base Sepolia)
-           |                        |
-    fetch_repo_contents    Identity Registry
-    fetch_file_content     Reputation Registry
-    search_code            Validation Registry
+                     USER INPUT (GitHub repo URL)
+                              |
+                     [Orchestrator Agent]
+                     Parses JSON plan dynamically
+                     Decides which agents to invoke
+                              |
+              +---------------+---------------+
+              |               |               |
+      [Scanner Agent]   [Analyzer Agent]  [Fixer Agent]
+      Runs 4 tools:     Deep CWE analysis  Generates fixes
+      - Semgrep SAST    Exploit scenarios   Follows code style
+      - Custom SAST     Impact assessment   Minimal diffs
+      - GitHub Advisory                          |
+      - GitHub API                          [Reviewer Agent]
+              |                             Approves/rejects
+              |                             If rejected:
+              |                             [Self-Correction]
+              |                             Fixer retries
+              |                                  |
+              +------ Inter-Agent Message Bus ---+
+              |       (typed: task_assignment,   |
+              |        result, feedback,         |
+              |        rejection, trust_query)   |
+              |                                  |
+         [ERC-8004 Trust Gate]           [x402 Payment Layer]
+         ownerOf() verification          Cost calculation
+         tokenURI() check                Payment headers
+         Dynamic reputation              Receipt verification
+              |                                  |
+         [On-Chain]                        [Output]
+         Identity Registry               Security report
+         Reputation Registry             GitHub PR
+         Ethereum Sepolia                agent_log.json
 ```
+
+### Security Tool Stack (4 Ground-Truth Tools)
+
+| Tool | Type | What It Does |
+|------|------|-------------|
+| **Semgrep** (v1.156.0) | Production SAST | Runs real Semgrep rules against fetched source code in temp sandbox |
+| **Custom SAST** | Pattern scanner | 12 OWASP-aligned regex rules with CWE mapping (CWE-78 through CWE-942) |
+| **GitHub Advisory Database** | CVE lookup | Queries real known vulnerabilities for every npm dependency |
+| **GitHub API** | Code access | Fetches repository structure, source files, package manifests |
+
+These tools run BEFORE the AI analysis. Claude receives their results as ground truth and uses them alongside its own contextual reasoning. This hybrid approach means findings are backed by real evidence, not just LLM opinions.
+
+---
+
+## On-Chain Proof
+
+All verifiable on blockchain explorers:
+
+| Asset | Details | Link |
+|-------|---------|------|
+| **ERC-8004 Identity** | Agent #2221, Ethereum Sepolia | [View TX](https://sepolia.etherscan.io/tx/0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab) |
+| **Reputation Score** | 95/100 from independent Reviewer agent | [View TX](https://sepolia.etherscan.io/tx/0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929) |
+| **Synthesis Identity** | Agent #35843, Base Mainnet | [View TX](https://basescan.org/tx/0xc53f8a24b9d206c9134d986b7e4b5452a1d41e3e5a3e2f772d57b3c0d83cd977) |
+| **Reviewer Funding** | ETH transfer to reviewer wallet | [View TX](https://sepolia.etherscan.io/tx/0x1ee6e604344b0c8d3787ffa37ee43f84daec8aedb1dd0110948997c7f5679db3) |
+
+**Trust-gating in action:** Before agents collaborate, the Orchestrator queries `ownerOf()` on the ERC-8004 Identity Registry to verify the agent has a registered on-chain identity. Agents without verified identities are refused collaboration. This is checked every run (visible in agent_log.json).
+
+**Dynamic reputation:** After each audit, a reputation score is computed from actual results (number of findings, severity distribution, completion rate) and submitted to the Reputation Registry. This score is NOT hardcoded -- it varies based on audit quality.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/run` | Start security audit. Returns x402 payment headers. |
+| `GET` | `/api/run` | Poll pipeline status (with cached results fallback) |
+| `POST` | `/api/stream` | SSE stream of real-time pipeline updates |
+| `GET` | `/api/register` | Agent identity, balance, ERC-8004 IDs, TX hashes |
+| `POST` | `/api/register` | Register new ERC-8004 identity on-chain |
+| `POST` | `/api/create-pr` | Fork repo, create audit branch, open PR with findings |
+| `GET` | `/api/agent-log` | Full structured execution log |
+
+### x402 Micropayment Protocol
+
+The `/api/run` endpoint implements x402. Responses include:
+```
+X-Payment-Required: true
+X-Payment-Amount: 0.60
+X-Payment-Currency: USDC
+X-Payment-Chain: base
+X-Payment-Recipient: 0xad114d421E106a845b196BdBe527A9dc4b7e8EF5
+```
+
+Agents can pay for audits by including `X-Payment-Tx`, `X-Payment-Amount`, and `X-Payment-Payer` headers.
+
+---
+
+## Pipeline Results (Real Execution)
+
+From the latest autonomous run against this repository:
+
+- **15 findings**: 2 critical, 3 high, 5 medium, 2 low, 3 info
+- **4 ground-truth tools**: Semgrep + custom SAST + GitHub Advisory + GitHub API
+- **6 pipeline steps**: Plan, Scan, Analyze, Fix, Review, Self-Correct
+- **Trust gate verified**: Agent #2221 identity confirmed via ownerOf()
+- **Dynamic reputation**: Score 100/100 computed from audit metrics
+- **Inter-agent messages**: Structured delegations via AgentMessageBus
+- **49 log entries**, 19 API calls, $0.50 total cost
+
+See `agent_log.json` for the complete execution trace.
+
+---
+
+## Inter-Agent Communication
+
+Agents communicate via typed messages through AgentMessageBus:
+
+```typescript
+interface AgentMessage {
+  from: AgentRole;       // "orchestrator" | "scanner" | "analyzer" | "fixer" | "reviewer"
+  to: AgentRole;
+  type: "task_assignment" | "result" | "feedback" | "rejection" | "trust_query";
+  payload: unknown;
+  timestamp: string;
+  messageId: string;
+}
+```
+
+Message flow per run:
+1. Orchestrator -> Scanner: `task_assignment` (repo to scan)
+2. Scanner -> Orchestrator: `result` (findings)
+3. Orchestrator -> Analyzer: `task_assignment` (critical findings)
+4. Fixer -> Reviewer: `result` (proposed fixes)
+5. Reviewer -> Fixer: `rejection` or `feedback` (triggers self-correction)
+
+---
+
+## Safety and Guardrails
+
+| Guardrail | Mechanism |
+|-----------|-----------|
+| **ERC-8004 Trust Gate** | ownerOf() + tokenURI() verification before agent collaboration |
+| **Sensitive Path Blocking** | Agents cannot access .env, credentials, .git/config |
+| **File Size Truncation** | Files > 5KB truncated to prevent context overflow |
+| **Max Iteration Limits** | 10 tool-use iterations per agent (prevents infinite loops) |
+| **Compute Budget** | Token/API call/cost limits enforced; pipeline halts if exceeded |
+| **Review Gate** | All fixes require Reviewer approval; rejection triggers retry |
+| **Self-Correction** | Fixer automatically retries with Reviewer feedback on rejection |
 
 ---
 
@@ -74,102 +180,43 @@ Agents check each other's reputation before trusting outputs. The Reviewer won't
 git clone https://github.com/ElijahUmana/forge-protocol.git
 cd forge-protocol
 npm install
-
-# Set up environment
-cp .env.example .env.local
-# Edit .env.local with your API keys
-
-# Run locally
-npm run dev
-# Open http://localhost:3000
+cp .env.example .env.local  # Add your API keys
+npm run dev                  # Open http://localhost:3000
 ```
 
 ### Environment Variables
 
 ```
-ANTHROPIC_API_KEY=your-key       # Claude API for agent reasoning
-AGENT_PRIVATE_KEY=0x...          # EVM wallet for ERC-8004 transactions
-AGENT_ADDRESS=0x...              # Derived wallet address
-GITHUB_TOKEN=ghp_...             # Optional: higher GitHub API rate limits
+ANTHROPIC_API_KEY=           # Claude API for agent reasoning
+AGENT_PRIVATE_KEY=0x...      # EVM wallet for ERC-8004 transactions
+AGENT_ADDRESS=0x...          # Derived wallet address
+GITHUB_TOKEN=ghp_...         # GitHub API (higher rate limits + Advisory DB)
 ```
-
-### Register ERC-8004 Identity
-
-1. Fund the agent wallet with Base Sepolia ETH from a [faucet](https://faucet.quicknode.com/base/sepolia)
-2. Open the app dashboard -> Identity tab
-3. Click "Register On-Chain Identity"
-4. Verify on [8004scan.io](https://www.8004scan.io/agents)
-
----
-
-## Submission Artifacts
-
-### agent.json -- Agent Capability Manifest
-
-Machine-readable manifest describing agent capabilities, tools, compute constraints, and guardrails. See [`agent.json`](./agent.json).
-
-### agent_log.json -- Structured Execution Logs
-
-Generated during each run via the `/api/agent-log` endpoint. Contains:
-- Every decision made by each agent
-- All tool calls with inputs, outputs, and timing
-- Guardrail activations (blocked paths, budget limits)
-- ERC-8004 transaction records
-- Token usage and cost estimates
-
-### ERC-8004 On-Chain Artifacts
-
-| Registry | Address (Base Sepolia) |
-|----------|----------------------|
-| Identity Registry | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
-| Reputation Registry | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
-
----
-
-## Safety & Guardrails
-
-Forge Protocol implements multiple safety layers:
-
-1. **Sensitive Path Blocking** -- Agents cannot access `.env`, credentials, or git config files
-2. **File Size Truncation** -- Large files are truncated to prevent context overflow
-3. **Max Iteration Limits** -- Each agent limited to 10 tool-use iterations to prevent infinite loops
-4. **Compute Budget Enforcement** -- Configurable token, API call, and cost limits. Pipeline halts when budget exceeded.
-5. **Transaction Validation** -- ERC-8004 transactions validated before signing
-6. **Review Gate** -- All generated fixes must pass Reviewer agent before application
-
----
-
-## Judging Criteria Alignment
-
-### Autonomy (35%)
-Full decision loop: discover -> plan -> execute -> verify -> report. Five agents operate independently after initial repository URL input. No human intervention at any stage.
-
-### Tool Use (25%)
-Multi-tool orchestration across: GitHub API (3 tools), Claude API (reasoning), ERC-8004 contracts (identity + reputation). Agents use tools adaptively based on findings.
-
-### Guardrails & Safety (20%)
-Six distinct safety mechanisms: path blocking, size truncation, iteration limits, budget enforcement, transaction validation, and review gates. All guardrail activations logged.
-
-### Impact (15%)
-Automated security auditing addresses a real problem: open-source repos accumulate vulnerabilities faster than humans can review. On-chain reputation creates accountability for automated auditors.
-
-### ERC-8004 Integration (Bonus 5%)
-Uses both Identity Registry and Reputation Registry on Base Sepolia. Agent identity registered as ERC-721 token. Reputation updated after each audit run.
 
 ---
 
 ## Tech Stack
 
-| Technology | Purpose |
-|-----------|---------|
-| Next.js 16 | Full-stack framework |
-| TypeScript | Language |
-| Tailwind CSS | Styling |
-| Claude API (Sonnet) | Agent reasoning with tool use |
-| viem | EVM/blockchain interaction |
-| ERC-8004 | On-chain agent identity & reputation |
-| Base Sepolia | Testnet for on-chain artifacts |
-| GitHub API | Repository scanning & code access |
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Next.js | 16.2.1 | Full-stack framework |
+| TypeScript | 5.x | Language |
+| Tailwind CSS | 4.x | Styling |
+| Claude API | claude-sonnet-4 | Agent reasoning with tool_use |
+| Semgrep | 1.156.0 | Production SAST scanning |
+| viem | 2.47.6 | EVM/blockchain interaction |
+| ERC-8004 | Mainnet + Sepolia | On-chain agent identity and reputation |
+| GitHub API | v3 | Repository scanning, Advisory Database, PR creation |
+| x402 Protocol | - | Agent-to-agent micropayments |
+
+---
+
+## Submission Artifacts
+
+- `agent.json` -- Machine-readable capability manifest with ERC-8004 IDs and TX hashes
+- `agent_log.json` -- 49-entry structured execution log from real pipeline run
+- `AGENTS.md` -- Full API documentation for agentic judges
+- Live deployment at https://forge-protocol-eight.vercel.app
 
 ---
 
