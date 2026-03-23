@@ -439,15 +439,113 @@ Create a plan with 3-5 steps covering: repository scanning, deep analysis of cri
 
     logger.log("scanner", "decision", "Beginning repository scan", { owner, repo });
 
+    // Phase 1: Directly fetch repository structure and key files via GitHub API
+    const ghHeaders: Record<string, string> = {
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "Forge-Protocol-Agent",
+    };
+    if (process.env.GITHUB_TOKEN) {
+      ghHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+    }
+
+    let repoContent = "";
+    const filesToFetch: string[] = [];
+
+    try {
+      // Get root directory listing
+      const rootRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/`, { headers: ghHeaders });
+      if (rootRes.ok) {
+        const rootFiles = await rootRes.json();
+        const fileList = rootFiles.map((f: { name: string; type: string; path: string }) => `${f.path} (${f.type})`).join("\n");
+        repoContent += `=== Repository Structure ===\n${fileList}\n\n`;
+        logger.log("scanner", "tool_call", "fetch_repo_contents", { path: "/", fileCount: rootFiles.length });
+
+        // Identify key files to fetch
+        for (const f of rootFiles) {
+          if (["package.json", "tsconfig.json", ".env.example", "next.config.ts", "next.config.js"].includes(f.name)) {
+            filesToFetch.push(f.path);
+          }
+        }
+
+        // Check src directory
+        const srcRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/src/lib`, { headers: ghHeaders });
+        if (srcRes.ok) {
+          const srcFiles = await srcRes.json();
+          for (const f of srcFiles) {
+            if (f.name.endsWith(".ts") || f.name.endsWith(".tsx")) {
+              filesToFetch.push(f.path);
+            }
+          }
+        }
+
+        // Also check API routes
+        const apiRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/src/app/api`, { headers: ghHeaders });
+        if (apiRes.ok) {
+          const apiDirs = await apiRes.json();
+          for (const d of apiDirs) {
+            if (d.type === "dir") {
+              const routeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${d.path}`, { headers: ghHeaders });
+              if (routeRes.ok) {
+                const routeFiles = await routeRes.json();
+                for (const rf of routeFiles) {
+                  if (rf.name === "route.ts") filesToFetch.push(rf.path);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.log("scanner", "error", "Failed to fetch repo structure", { error: String(err) });
+    }
+
+    // Fetch file contents (up to 8 files)
+    for (const filePath of filesToFetch.slice(0, 8)) {
+      try {
+        const fileRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`, { headers: ghHeaders });
+        if (fileRes.ok) {
+          const fileData = await fileRes.json();
+          if (fileData.content) {
+            let content = Buffer.from(fileData.content, "base64").toString("utf-8");
+            if (content.length > 5000) content = content.slice(0, 5000) + "\n... [TRUNCATED]";
+            repoContent += `=== ${filePath} ===\n${content}\n\n`;
+            logger.log("scanner", "tool_call", "fetch_file_content", { path: filePath, size: content.length });
+          }
+        }
+      } catch {
+        // skip files that fail
+      }
+    }
+
+    // Phase 2: Pass all gathered code to Claude for analysis (NO tool use)
+    logger.log("scanner", "decision", `Analyzing ${filesToFetch.length} files for vulnerabilities`, {
+      files: filesToFetch,
+    });
+
     const scanResult = await runAgent(
       "scanner",
-      `Scan the GitHub repository ${owner}/${repo} for security vulnerabilities and code quality issues.
-Use the fetch_repo_contents tool to explore the repository structure.
-Then use fetch_file_content to examine critical files (package.json, config files, main source files, any files that handle auth/crypto/input).
-Look for: hardcoded secrets, injection vulnerabilities, missing input validation, insecure dependencies, error handling gaps.
-Return your findings as a JSON array.`,
+      `Analyze this GitHub repository (${owner}/${repo}) for security vulnerabilities and code quality issues.
+
+Here is the repository content:
+
+${repoContent}
+
+Identify ALL security vulnerabilities and code quality issues. Look for:
+1. Hardcoded secrets, API keys, passwords in source code
+2. Missing input validation (SQL injection, XSS, command injection)
+3. Insecure authentication or session management
+4. Missing HTTPS, CORS misconfigurations
+5. Outdated or vulnerable dependencies
+6. Missing error handling that could leak information
+7. Insecure file operations or path traversal risks
+8. Missing rate limiting on API endpoints
+9. Exposed debug endpoints or verbose error messages
+10. Insecure cryptographic practices
+
+Return ONLY a raw JSON array (no markdown code fences, no explanation).
+Each element: {"severity":"critical|high|medium|low|info","title":"...","description":"...","file":"...","line":null,"suggestion":"..."}`,
       logger,
-      true
+      false  // No tools — pure analysis
     );
 
     scanStep.output = scanResult;
