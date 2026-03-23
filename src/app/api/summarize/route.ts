@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     max_tokens: 500,
     messages: [{
       role: "user",
-      content: `You are a security auditor summarizing an autonomous audit. Write a concise, professional summary (3-5 sentences) of this security audit.
+      content: `You are a security auditor summarizing an autonomous audit. Write a concise, professional summary (3-5 sentences) of this security audit. Do NOT use any markdown formatting — no ##, no **, no bullet points. Write plain text only.
 
 Repository: ${targetRepo}
 Pipeline steps completed: ${steps}
