@@ -126,19 +126,31 @@ Agents can pay for audits by including `X-Payment-Tx`, `X-Payment-Amount`, and `
 
 ---
 
-## Pipeline Results (Real Execution)
+## Demo: OWASP Juice Shop Audit
 
-From the latest autonomous run against this repository:
+Forge Protocol was pointed at [OWASP Juice Shop](https://github.com/juice-shop/juice-shop), a deliberately vulnerable web application used for security training. The autonomous pipeline produced:
 
-- **15 findings**: 2 critical, 3 high, 5 medium, 2 low, 3 info
-- **4 ground-truth tools**: Semgrep + custom SAST + GitHub Advisory + GitHub API
-- **6 pipeline steps**: Plan, Scan, Analyze, Fix, Review, Self-Correct
-- **Trust gate verified**: Agent #2221 identity confirmed via ownerOf()
-- **Dynamic reputation**: Score 100/100 computed from audit metrics
-- **Inter-agent messages**: Structured delegations via AgentMessageBus
-- **49 log entries**, 19 API calls, $0.50 total cost
+**12 real vulnerabilities found:**
+- **[CRITICAL]** Hardcoded encryption keys in repository
+- **[HIGH]** Vulnerable body-parser dependency causing DoS
+- **[HIGH]** Vulnerable colors.js dependency causing infinite loop DoS
+- **[HIGH]** Intentionally insecure JWT implementation
+- **[HIGH]** Weak password hashing implementation
+- **[MEDIUM]** SQL injection vulnerabilities
+- **[MEDIUM]** File upload vulnerabilities
+- **[MEDIUM]** Insecure direct object references
+- Plus 4 additional medium/low/info findings
 
-See `agent_log.json` for the complete execution trace.
+**Pipeline execution:**
+- 5 ground-truth tools: Semgrep 1.156.0 + custom SAST (12 rules) + GitHub Advisory Database + GitHub API + Claude
+- 6 pipeline steps: Plan, Scan, Analyze, Fix, Review, Self-Correct
+- Trust gate: Agent #2221 identity verified via ownerOf() before agent collaboration
+- Dynamic reputation: Score computed from actual audit metrics (not hardcoded)
+- Inter-agent messages: Structured delegations via AgentMessageBus
+- Autonomous PR creation: fork + audit branch + SECURITY_AUDIT.md + pull request
+- 56K tokens, 18 API calls, $0.51 total cost
+
+See `agent_log.json` for the complete execution trace with all 35+ log entries.
 
 ---
 
