@@ -34,6 +34,45 @@ When an automated security tool reports a vulnerability, there is no way to veri
 
 Today's AI security tools operate without identity, without reputation, and without accountability. They are anonymous black boxes that could hallucinate findings or miss real vulnerabilities -- and nobody would know until production breaks.
 
+## Architecture
+
+```
+                         USER INPUT (GitHub repo URL)
+                                    |
+                          [Orchestrator Agent]
+                          Parses JSON plan dynamically
+                          Decides which agents to invoke
+                                    |
+                +-------------------+-------------------+
+                |                   |                   |
+        [Scanner Agent]      [Analyzer Agent]     [Fixer Agent]
+        Runs 5 tools:        Deep CWE analysis    Generates fixes
+        - Semgrep SAST       Exploit scenarios     Follows code style
+        - Custom SAST        Impact assessment     Minimal diffs
+        - GitHub Advisory                              |
+        - GitHub API                            [Reviewer Agent]
+        - Claude AI                             Approves/rejects
+                |                               If rejected:
+                |                               [Self-Correction]
+                |                               Fixer retries
+                |                                     |
+                +------ Inter-Agent Message Bus ------+
+                |       (typed: task_assignment,      |
+                |        result, feedback,            |
+                |        rejection, trust_query)      |
+                |                                     |
+           [ERC-8004 Trust Gate]            [Autonomous PR Creation]
+           ownerOf() verification           Fork > Branch > Commit >
+           Dynamic reputation               Open Pull Request
+                |                                     |
+           [On-Chain]                           [Output]
+           Identity Registry                   SECURITY_AUDIT.md
+           Reputation Registry                 GitHub Pull Request
+           Ethereum Sepolia                    agent_log.json
+```
+
+---
+
 ## What Forge Protocol Does
 
 Forge Protocol is the first autonomous security auditor where **every audit is accountable on-chain**.
