@@ -23,14 +23,34 @@ const AGENT_PROMPTS: Record<AgentRole, string> = {
 Output a JSON plan with steps. Each step has: agent (scanner/analyzer/fixer/reviewer), action (string), and input (object).
 Return ONLY valid JSON array of steps.`,
 
-  scanner: `You are the Scanner Agent. You analyze GitHub repository structure and identify potential issues.
-Given repository contents, identify:
-- Security vulnerabilities (hardcoded secrets, SQL injection, XSS, etc.)
-- Code quality issues (dead code, complexity, missing error handling)
-- Dependency risks (outdated packages, known CVEs)
-- Architecture issues (circular deps, tight coupling)
+  scanner: `You are the Scanner Agent of Forge Protocol. You analyze GitHub repositories to find security vulnerabilities and code quality issues.
 
-Return a JSON array of findings, each with: severity (critical/high/medium/low/info), title, description, file, line (or null), suggestion.`,
+IMPORTANT: You MUST use the provided tools to explore the repository. Start by fetching the root directory, then examine key files like package.json, config files, and source code files that handle authentication, user input, database queries, or sensitive operations.
+
+After examining the repository, you MUST return your findings as a raw JSON array (no markdown code fences). Each finding must have exactly these fields:
+- severity: "critical" | "high" | "medium" | "low" | "info"
+- title: short descriptive title
+- description: detailed explanation
+- file: the file path where the issue was found
+- line: line number or null
+- suggestion: how to fix the issue
+
+Look specifically for:
+1. Hardcoded secrets, API keys, passwords in source code
+2. Missing input validation or sanitization (SQL injection, XSS, command injection)
+3. Insecure authentication or session management
+4. Missing HTTPS, CORS misconfigurations
+5. Outdated dependencies with known CVEs
+6. Missing error handling that could leak information
+7. Insecure file operations or path traversal risks
+8. Missing rate limiting on API endpoints
+9. Exposed debug endpoints or verbose error messages
+10. Insecure cryptographic practices
+
+Even if you don't find critical vulnerabilities, ALWAYS report at least informational findings about code quality, missing best practices, or areas for improvement. Every repository has something to report.
+
+Your final response must be ONLY the JSON array, like:
+[{"severity":"medium","title":"Missing input validation","description":"...","file":"src/api/handler.ts","line":42,"suggestion":"Add input sanitization using..."}]`,
 
   analyzer: `You are the Analyzer Agent. You perform deep analysis on specific findings.
 Given a finding and the relevant code, provide:
@@ -436,9 +456,18 @@ Return your findings as a JSON array.`,
 
     // Parse findings from scanner output
     try {
-      const jsonMatch = scanResult.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const rawFindings = JSON.parse(jsonMatch[0]);
+      // Try multiple JSON extraction strategies
+      let jsonStr: string | null = null;
+      // Strategy 1: raw JSON array
+      const rawMatch = scanResult.match(/\[[\s\S]*\]/);
+      if (rawMatch) jsonStr = rawMatch[0];
+      // Strategy 2: JSON inside markdown code block
+      if (!jsonStr) {
+        const codeBlockMatch = scanResult.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (codeBlockMatch) jsonStr = codeBlockMatch[1];
+      }
+      if (jsonStr) {
+        const rawFindings = JSON.parse(jsonStr);
         run.findings = rawFindings.map((f: Partial<Finding>, i: number) => ({
           id: `finding-${i + 1}`,
           severity: f.severity ?? "info",
