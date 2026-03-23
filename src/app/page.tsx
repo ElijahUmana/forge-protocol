@@ -132,7 +132,8 @@ export default function Dashboard() {
 
   const startRunWithSSE = useCallback(async (targetRepo: string) => {
     setIsRunning(true);
-    setRun(null);
+    setRun({ id: "new", startedAt: new Date().toISOString(), completedAt: null, status: "running", targetRepo, steps: [], log: [], budget: { maxTokens: 500000, usedTokens: 0, maxApiCalls: 100, usedApiCalls: 0, estimatedCostUSD: 0 }, findings: [], erc8004Txs: [] });
+    setActiveTab("overview");
     try {
       const res = await fetch("/api/stream", {
         method: "POST",
