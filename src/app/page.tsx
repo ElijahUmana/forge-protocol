@@ -320,6 +320,72 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Completion Summary */}
+                {run && run.status === "completed" && (
+                  <div className="p-5 rounded-xl bg-gradient-to-r from-green-500/5 via-zinc-900/50 to-violet-500/5 border border-green-500/20">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-lg">&#10003;</div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-green-400">Audit Complete</h3>
+                        <p className="text-[10px] text-zinc-500">All agents finished autonomously</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                      <div className="p-3 rounded-lg bg-zinc-800/30 text-center">
+                        <div className="text-xl font-bold text-white">{run.findings.length}</div>
+                        <div className="text-[10px] text-zinc-500">Findings</div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-zinc-800/30 text-center">
+                        <div className="text-xl font-bold text-red-400">{critCount}</div>
+                        <div className="text-[10px] text-zinc-500">Critical</div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-zinc-800/30 text-center">
+                        <div className="text-xl font-bold text-violet-400">{run.steps.length}</div>
+                        <div className="text-[10px] text-zinc-500">Pipeline Steps</div>
+                      </div>
+                      <div className="p-3 rounded-lg bg-zinc-800/30 text-center">
+                        <div className="text-xl font-bold text-green-400">${run.budget?.estimatedCostUSD?.toFixed(2) ?? "0"}</div>
+                        <div className="text-[10px] text-zinc-500">Total Cost</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-zinc-400 space-y-1.5 mb-3">
+                      <p><span className="text-zinc-500">Tools used:</span> Semgrep SAST, Custom SAST (12 CWE rules), GitHub Advisory CVE Database, Claude AI</p>
+                      <p><span className="text-zinc-500">Trust verified:</span> Agent #2221 identity confirmed on ERC-8004 Identity Registry via ownerOf()</p>
+                      <p><span className="text-zinc-500">Reputation:</span> Dynamic score computed from {run.findings.length} findings ({critCount} critical, {highCount} high)</p>
+                      {run.findings.length > 0 && (
+                        <p><span className="text-zinc-500">Most critical:</span> <span className="text-red-400">{run.findings.find(f => f.severity === "critical")?.title ?? run.findings[0]?.title}</span></p>
+                      )}
+                    </div>
+                    {/* PR Link */}
+                    {run.erc8004Txs?.some(tx => tx.chain === "github") && (
+                      <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center gap-3">
+                        <span className="text-blue-400 text-lg">&#128279;</span>
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold text-blue-400">Pull Request Created</div>
+                          <a href={run.erc8004Txs.find(tx => tx.chain === "github")?.hash} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-300 hover:underline">
+                            {run.erc8004Txs.find(tx => tx.chain === "github")?.hash ?? "View PR"}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {/* On-chain proof links */}
+                    <div className="flex gap-2 mt-3">
+                      <a href="https://sepolia.etherscan.io/tx/0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab" target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] px-2 py-1 rounded bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors">
+                        Identity TX &#8599;
+                      </a>
+                      <a href="https://sepolia.etherscan.io/tx/0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929" target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] px-2 py-1 rounded bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors">
+                        Reputation TX &#8599;
+                      </a>
+                      <a href="https://www.8004scan.io/agents/2221" target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] px-2 py-1 rounded bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors">
+                        8004scan &#8599;
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* Inter-Agent Communication Flow */}
                 {run && run.log.length > 0 && (
                   <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/50">

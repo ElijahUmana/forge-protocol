@@ -905,6 +905,17 @@ Include CWE references, potential impact, and exploitation scenarios.`,
       analyzeStep.output = analysisResult;
       analyzeStep.status = "completed";
       analyzeStep.completedAt = new Date().toISOString();
+
+      // Inter-agent: Analyzer sends deep analysis to Orchestrator
+      messageBus.send({
+        from: "analyzer",
+        to: "orchestrator",
+        type: "result",
+        payload: { action: "deep_analysis_complete", findingsAnalyzed: topFindings.length },
+      });
+      logger.log("analyzer", "delegation", "Sent deep analysis results to Orchestrator via message bus", {
+        findingsAnalyzed: topFindings.length,
+      });
       emitUpdate();
 
       // === STEP 4: Fixer proposes fixes ===
@@ -939,6 +950,17 @@ Return JSON with fixedCode, explanation, and filesChanged for each finding.`,
         fixStep.output = fixResult;
         fixStep.status = "completed";
         fixStep.completedAt = new Date().toISOString();
+
+        // Inter-agent: Fixer sends proposed fixes to Reviewer for verification
+        messageBus.send({
+          from: "fixer",
+          to: "reviewer",
+          type: "result",
+          payload: { action: "fixes_proposed", fixesGenerated: topFindings.length },
+        });
+        logger.log("fixer", "delegation", "Sent proposed fixes to Reviewer for verification via message bus", {
+          fixesGenerated: topFindings.length,
+        });
         emitUpdate();
 
         // === STEP 5: Reviewer verifies fixes ===
@@ -977,6 +999,19 @@ Give approval/rejection with reasoning for each.`,
           reviewStep.output = reviewResult;
           reviewStep.status = "completed";
           reviewStep.completedAt = new Date().toISOString();
+
+          // Inter-agent: Reviewer sends verdict back to Orchestrator
+          const isApproved = !reviewResult.toLowerCase().includes('"approved":false') &&
+            !reviewResult.toLowerCase().includes('"approved": false');
+          messageBus.send({
+            from: "reviewer",
+            to: "orchestrator",
+            type: isApproved ? "feedback" : "rejection",
+            payload: { action: isApproved ? "fixes_approved" : "fixes_rejected", verdict: isApproved ? "APPROVED" : "REJECTED" },
+          });
+          logger.log("reviewer", "delegation", `Sent ${isApproved ? "APPROVAL" : "REJECTION"} verdict to Orchestrator via message bus`, {
+            approved: isApproved,
+          });
           emitUpdate();
 
           // === SELF-CORRECTION: If reviewer rejects, fixer retries ===
