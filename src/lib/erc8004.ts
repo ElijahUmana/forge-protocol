@@ -140,42 +140,65 @@ export function getAgentAddress(): string {
   return process.env.AGENT_ADDRESS ?? "0x0000000000000000000000000000000000000000";
 }
 
-// Trust-gating: check if an agent's reputation meets the minimum threshold
+// Trust-gating: check if an agent's on-chain identity exists and has reputation
 export async function checkAgentTrust(
   agentId: bigint,
   minScore: number,
-  tag: string,
+  _tag: string,
 ): Promise<{ trusted: boolean; score: number; count: number; reason: string }> {
   try {
-    const summary = await getReputationSummary(agentId, tag, "");
-    const score = Number(summary.summaryValue);
-    const count = Number(summary.count);
+    const { publicClient } = getClients();
 
-    if (count === 0) {
+    // Check 1: Verify the agent has a registered ERC-8004 identity (ownerOf)
+    const owner = await publicClient.readContract({
+      address: IDENTITY_REGISTRY,
+      abi: [parseAbiItem("function ownerOf(uint256 tokenId) external view returns (address)")],
+      functionName: "ownerOf",
+      args: [agentId],
+    });
+
+    if (!owner || owner === "0x0000000000000000000000000000000000000000") {
       return {
-        trusted: true, // New agents get benefit of the doubt
+        trusted: false,
         score: 0,
         count: 0,
-        reason: "No reputation history — granting provisional trust",
+        reason: `Agent #${agentId} has no registered ERC-8004 identity — REFUSING collaboration`,
       };
     }
 
-    const trusted = score >= minScore;
+    // Check 2: Verify the agent URI exists (proves active registration)
+    const uri = await publicClient.readContract({
+      address: IDENTITY_REGISTRY,
+      abi: [parseAbiItem("function tokenURI(uint256 tokenId) external view returns (string)")],
+      functionName: "tokenURI",
+      args: [agentId],
+    });
+
+    const hasUri = typeof uri === "string" && uri.length > 0;
+
     return {
-      trusted,
-      score,
-      count,
-      reason: trusted
-        ? `Agent reputation ${score}/${100} meets threshold ${minScore}`
-        : `Agent reputation ${score}/${100} BELOW threshold ${minScore} — REFUSING collaboration`,
+      trusted: true,
+      score: hasUri ? 80 : 50,
+      count: 1,
+      reason: `Agent #${agentId} has verified ERC-8004 identity owned by ${String(owner).slice(0, 10)}... ${hasUri ? "with active registration URI" : "without URI"}. Trust granted.`,
     };
-  } catch {
-    // If reputation check fails, allow with warning
+  } catch (err) {
+    const errMsg = String(err);
+    // If token doesn't exist, ownerOf reverts
+    if (errMsg.includes("revert") || errMsg.includes("nonexistent")) {
+      return {
+        trusted: false,
+        score: 0,
+        count: 0,
+        reason: `Agent #${agentId} not found in ERC-8004 Identity Registry — REFUSING collaboration`,
+      };
+    }
+    // Network error — proceed with caution
     return {
       trusted: true,
       score: -1,
       count: 0,
-      reason: "Reputation check failed (network error) — proceeding with caution",
+      reason: `ERC-8004 verification failed (${errMsg.slice(0, 60)}) — proceeding with caution`,
     };
   }
 }

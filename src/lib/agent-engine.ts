@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { AgentLogger, createLogger } from "./logger";
 import { registerAgentIdentity, giveFeedback, getAgentAddress, checkAgentTrust } from "./erc8004";
+import { runSAST, type SASTFinding } from "./sast";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -590,7 +591,8 @@ Return ONLY the JSON object, no markdown.`,
       logger.log("scanner", "error", "Failed to fetch repo structure", { error: String(err) });
     }
 
-    // Fetch file contents (up to 8 files)
+    // Fetch file contents (up to 8 files) and collect for SAST
+    const fetchedFiles: { path: string; content: string }[] = [];
     for (const filePath of filesToFetch.slice(0, 8)) {
       try {
         const fileRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`, { headers: ghHeaders });
@@ -598,6 +600,7 @@ Return ONLY the JSON object, no markdown.`,
           const fileData = await fileRes.json();
           if (fileData.content) {
             let content = Buffer.from(fileData.content, "base64").toString("utf-8");
+            fetchedFiles.push({ path: filePath, content });
             if (content.length > 5000) content = content.slice(0, 5000) + "\n... [TRUNCATED]";
             repoContent += `=== ${filePath} ===\n${content}\n\n`;
             logger.log("scanner", "tool_call", "fetch_file_content", { path: filePath, size: content.length });
@@ -608,7 +611,26 @@ Return ONLY the JSON object, no markdown.`,
       }
     }
 
-    // Phase 2: Pass all gathered code to Claude for analysis (NO tool use)
+    // Phase 1.5: Run deterministic SAST scanner (pattern-based, no AI)
+    let sastResults = "";
+    if (fetchedFiles.length > 0) {
+      const sastFindings = runSAST(fetchedFiles);
+      logger.log("scanner", "tool_call", "sast_pattern_scanner", {
+        filesScanned: fetchedFiles.length,
+        findingsCount: sastFindings.length,
+        rules: sastFindings.map((f: SASTFinding) => f.rule),
+      });
+
+      if (sastFindings.length > 0) {
+        sastResults = sastFindings.map((f: SASTFinding) =>
+          `[${f.severity.toUpperCase()}] ${f.rule}: ${f.title} in ${f.file}:${f.line} — ${f.cwe}\n  Match: ${f.match}\n  ${f.description}`
+        ).join("\n\n");
+      } else {
+        sastResults = "No pattern-based vulnerabilities detected by SAST scanner.";
+      }
+    }
+
+    // Phase 2: Pass all gathered code + SAST + CVE results to Claude for analysis
     logger.log("scanner", "decision", `Analyzing ${filesToFetch.length} files for vulnerabilities`, {
       files: filesToFetch,
     });
@@ -623,7 +645,10 @@ ${repoContent}
 
 === REAL TOOL OUTPUT: GitHub Advisory Database CVE Scan ===
 ${npmAuditResults}
-=== END REAL TOOL OUTPUT ===
+
+=== REAL TOOL OUTPUT: SAST Pattern Scanner (12 OWASP rules, CWE-mapped) ===
+${sastResults}
+=== END REAL TOOL OUTPUTS ===
 
 Using BOTH the code analysis AND the real CVE scan results above, identify ALL security vulnerabilities and code quality issues. Look for:
 1. Hardcoded secrets, API keys, passwords in source code
