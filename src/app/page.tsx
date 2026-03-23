@@ -121,14 +121,46 @@ export default function Dashboard() {
   const [run, setRun] = useState<RunData | null>(null);
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "logs" | "findings" | "identity">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "logs" | "findings" | "identity" | "history">("overview");
+  const [runHistory, setRunHistory] = useState<{ repo: string; findings: number; critical: number; date: string; prUrl?: string }[]>([]);
 
+  // Load history from localStorage + cached server results
   useEffect(() => {
     fetch("/api/register").then(r => r.json()).then(setWallet).catch(() => {});
     fetch("/api/run").then(r => r.json()).then(data => {
       if (data.run?.findings?.length > 0) setRun(data.run);
     }).catch(() => {});
+    // Load saved history
+    try {
+      const saved = localStorage.getItem("forge-history");
+      if (saved) setRunHistory(JSON.parse(saved));
+    } catch { /* ignore */ }
   }, []);
+
+  // Save to history when a run completes
+  useEffect(() => {
+    if (run?.status === "completed" && run.findings.length > 0) {
+      const entry = {
+        repo: run.targetRepo,
+        findings: run.findings.length,
+        critical: run.findings.filter(f => f.severity === "critical").length,
+        date: run.completedAt ?? new Date().toISOString(),
+        prUrl: run.erc8004Txs?.find(tx => tx.chain === "github")?.hash,
+      };
+      setRunHistory(prev => {
+        const updated = [entry, ...prev.filter(h => h.repo !== entry.repo || h.date !== entry.date)].slice(0, 20);
+        try { localStorage.setItem("forge-history", JSON.stringify(updated)); } catch { /* ignore */ }
+        return updated;
+      });
+    }
+  }, [run?.status, run?.findings.length, run?.targetRepo, run?.completedAt, run?.erc8004Txs]);
+
+  const clearSession = () => {
+    setRun(null);
+    setRepoUrl("");
+    setIsRunning(false);
+    setActiveTab("overview");
+  };
 
   const startRunWithSSE = useCallback(async (targetRepo: string) => {
     setIsRunning(true);
@@ -202,8 +234,13 @@ export default function Dashboard() {
               </div>
             )}
             {run && (
-              <div className={`px-3 py-1.5 rounded-lg font-medium ${run.status === "running" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : run.status === "completed" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
-                {run.status === "running" ? "ANALYZING" : run.status.toUpperCase()}
+              <div className="flex items-center gap-2">
+                <div className={`px-3 py-1.5 rounded-lg font-medium ${run.status === "running" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : run.status === "completed" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                  {run.status === "running" ? "ANALYZING" : run.status.toUpperCase()}
+                </div>
+                <button onClick={clearSession} className="px-2 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors" title="Clear Session">
+                  &#10005;
+                </button>
               </div>
             )}
           </div>
@@ -226,12 +263,15 @@ export default function Dashboard() {
       {/* Tabs */}
       <div className="border-b border-zinc-800/50 px-6">
         <div className="max-w-7xl mx-auto flex gap-1">
-          {(["overview", "logs", "findings", "identity"] as const).map(tab => (
+          {(["overview", "logs", "findings", "identity", "history"] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all ${activeTab === tab ? "border-violet-500 text-violet-400" : "border-transparent text-zinc-600 hover:text-zinc-400"}`}>
               {tab}
               {tab === "findings" && run && run.findings.length > 0 && (
                 <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400">{run.findings.length}</span>
+              )}
+              {tab === "history" && runHistory.length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-zinc-700 text-zinc-400">{runHistory.length}</span>
               )}
             </button>
           ))}
@@ -585,6 +625,40 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
+            </div>
+          ) : activeTab === "history" ? (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Audit History</h3>
+                <span className="text-[10px] text-zinc-600">{runHistory.length} runs</span>
+              </div>
+              {runHistory.length === 0 ? (
+                <div className="text-center py-12 text-zinc-600 text-sm">No audit history yet. Run an analysis to see results here.</div>
+              ) : (
+                runHistory.map((h, i) => (
+                  <div key={i} className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-zinc-300 truncate flex-1">{h.repo.replace("https://github.com/", "")}</span>
+                      <span className="text-[10px] text-zinc-600 shrink-0 ml-3">{new Date(h.date).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">{h.findings} findings</span>
+                      {h.critical > 0 && <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-400">{h.critical} critical</span>}
+                      {h.prUrl && (
+                        <a href={h.prUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors">
+                          View PR &#8599;
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              {runHistory.length > 0 && (
+                <button onClick={() => { setRunHistory([]); localStorage.removeItem("forge-history"); }}
+                  className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+                  Clear history
+                </button>
+              )}
             </div>
           ) : null}
         </div>
