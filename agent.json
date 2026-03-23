@@ -1,0 +1,83 @@
+{
+  "name": "Forge Protocol",
+  "version": "1.0.0",
+  "description": "Autonomous multi-agent system that discovers, analyzes, and fixes code quality and security issues in GitHub repositories. Agents operate with ERC-8004 on-chain identities, reputation tracking, and trust-gated collaboration.",
+  "operator": {
+    "wallet": "0xad114d421E106a845b196BdBe527A9dc4b7e8EF5",
+    "name": "Elijah Umana",
+    "contact": "elijah@uni.minerva.edu"
+  },
+  "erc8004": {
+    "chain": "base-sepolia",
+    "chainId": 84532,
+    "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+    "agentId": null
+  },
+  "agents": [
+    {
+      "name": "Orchestrator",
+      "role": "Task decomposition, delegation, and coordination",
+      "capabilities": ["task_planning", "agent_delegation", "progress_tracking"],
+      "model": "claude-sonnet-4-20250514"
+    },
+    {
+      "name": "Scanner",
+      "role": "Repository discovery and issue identification",
+      "capabilities": ["github_api", "code_search", "issue_detection"],
+      "model": "claude-sonnet-4-20250514"
+    },
+    {
+      "name": "Analyzer",
+      "role": "Deep code analysis and vulnerability detection",
+      "capabilities": ["static_analysis", "security_audit", "code_review"],
+      "model": "claude-sonnet-4-20250514"
+    },
+    {
+      "name": "Fixer",
+      "role": "Code generation and fix implementation",
+      "capabilities": ["code_generation", "refactoring", "testing"],
+      "model": "claude-sonnet-4-20250514"
+    },
+    {
+      "name": "Reviewer",
+      "role": "Fix verification and quality assurance",
+      "capabilities": ["code_review", "regression_check", "approval"],
+      "model": "claude-sonnet-4-20250514"
+    }
+  ],
+  "tools": [
+    "github_api",
+    "blockchain_scanner",
+    "claude_api",
+    "code_analysis",
+    "erc8004_registry"
+  ],
+  "techStack": [
+    "typescript",
+    "next.js",
+    "viem",
+    "anthropic-sdk",
+    "base-sepolia"
+  ],
+  "computeConstraints": {
+    "maxTokensPerRun": 500000,
+    "maxApiCallsPerRun": 100,
+    "maxDurationMinutes": 30,
+    "costLimitUSD": 5.0
+  },
+  "taskCategories": [
+    "code_security_audit",
+    "code_quality_review",
+    "bug_detection",
+    "automated_fixes",
+    "pr_creation"
+  ],
+  "guardrails": {
+    "requireReviewBeforePush": true,
+    "blockDestructiveOperations": true,
+    "validateTransactionParams": true,
+    "maxFileChangesPerPR": 10,
+    "requireHumanApprovalForMainBranch": true
+  }
+}
