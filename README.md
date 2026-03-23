@@ -1,8 +1,10 @@
 # Forge Protocol
 
-**Autonomous Multi-Agent Security Auditor with ERC-8004 Trust, x402 Payments, and Real SAST Tooling**
+**The First Autonomous Security Auditor with On-Chain Accountability**
 
-Forge Protocol is a fully autonomous system that discovers, analyzes, and fixes security vulnerabilities in any GitHub repository. It combines deterministic security tools (Semgrep, custom SAST, GitHub Advisory Database) with AI reasoning (Claude), all coordinated through ERC-8004 on-chain trust and inter-agent message passing.
+Every existing tool can find and fix bugs. Copilot Autofix, Snyk Agent Fix, OpenAI Aardvark — they all do AI-powered security scanning. **None of them can prove they did it reliably, build verifiable reputation over time, or let other agents trust their results on-chain.**
+
+Forge Protocol combines deterministic security tools (Semgrep, custom SAST, GitHub Advisory Database) with AI reasoning (Claude), coordinated through ERC-8004 on-chain trust, inter-agent message passing, x402 micropayments, and autonomous PR creation.
 
 **Live demo:** https://forge-protocol-eight.vercel.app
 **Synthesis Agent #35843** (Base Mainnet) | **ERC-8004 Agent #2221** (Ethereum Sepolia)
