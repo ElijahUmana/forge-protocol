@@ -319,6 +319,61 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
+
+                {/* Inter-Agent Communication Flow */}
+                {run && run.log.length > 0 && (
+                  <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Inter-Agent Communication</h3>
+                    <div className="space-y-2">
+                      {run.log
+                        .filter(e => e.type === "delegation" || e.type === "reputation" || e.action.toLowerCase().includes("message bus") || e.action.toLowerCase().includes("trust gate") || e.action.toLowerCase().includes("self-correction") || e.action.toLowerCase().includes("pr"))
+                        .slice(0, 8)
+                        .map((e, i) => {
+                          const cfg = AGENT_CONFIG[e.agent] ?? AGENT_CONFIG.orchestrator;
+                          const isReputation = e.type === "reputation";
+                          const isTrust = e.action.toLowerCase().includes("trust");
+                          const isPR = e.action.toLowerCase().includes("pr") || e.action.toLowerCase().includes("create");
+                          return (
+                            <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${isReputation ? "bg-violet-500/5 border-violet-500/20" : isTrust ? "bg-green-500/5 border-green-500/20" : isPR ? "bg-blue-500/5 border-blue-500/20" : "bg-zinc-800/30 border-zinc-800/50"}`}>
+                              <AgentIcon agent={e.agent} size={24} />
+                              <div className="flex-1 min-w-0">
+                                <div className={`text-[11px] font-medium ${cfg.color}`}>{e.action}</div>
+                                {e.details && (
+                                  <div className="text-[10px] text-zinc-600 truncate mt-0.5">
+                                    {isTrust && typeof e.details === "object" && "reason" in (e.details as Record<string, unknown>)
+                                      ? String((e.details as Record<string, unknown>).reason)
+                                      : isReputation && typeof e.details === "object" && "dynamicScore" in (e.details as Record<string, unknown>)
+                                      ? `Score: ${(e.details as Record<string, unknown>).dynamicScore}/100`
+                                      : isPR && typeof e.details === "object" && "prUrl" in (e.details as Record<string, unknown>)
+                                      ? String((e.details as Record<string, unknown>).prUrl)
+                                      : JSON.stringify(e.details).slice(0, 80)}
+                                  </div>
+                                )}
+                              </div>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isReputation ? "bg-violet-500/20 text-violet-400" : isTrust ? "bg-green-500/20 text-green-400" : isPR ? "bg-blue-500/20 text-blue-400" : "bg-zinc-700/50 text-zinc-500"}`}>
+                                {isReputation ? "REPUTATION" : isTrust ? "TRUST" : isPR ? "PR" : e.type}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* GitHub PR Created */}
+                {run?.erc8004Txs?.some(tx => tx.chain === "github") && (
+                  <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-green-400 mb-2">Autonomous PR Created</h3>
+                    {run.erc8004Txs.filter(tx => tx.chain === "github").map((tx, i) => (
+                      <a key={i} href={tx.hash} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                        <span>View Pull Request</span>
+                        <span className="text-xs">&#8599;</span>
+                      </a>
+                    ))}
+                    <p className="text-[10px] text-zinc-600 mt-1">Security audit report committed to target repository</p>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar */}
