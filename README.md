@@ -1,198 +1,126 @@
-# Forge Protocol
+<p align="center">
+  <img src="public/forge_logo.jpg" alt="Forge Protocol" width="200" />
+</p>
 
-**The First Autonomous Security Auditor with On-Chain Accountability**
+<h1 align="center">Forge Protocol</h1>
 
-Every existing tool can find and fix bugs. Copilot Autofix, Snyk Agent Fix, OpenAI Aardvark — they all do AI-powered security scanning. **None of them can prove they did it reliably, build verifiable reputation over time, or let other agents trust their results on-chain.**
+<p align="center"><strong>The First Autonomous Security Auditor with On-Chain Accountability</strong></p>
 
-Forge Protocol combines deterministic security tools (Semgrep, custom SAST, GitHub Advisory Database) with AI reasoning (Claude), coordinated through ERC-8004 on-chain trust, inter-agent message passing, x402 micropayments, and autonomous PR creation.
-
-**Live demo:** https://forge-protocol-eight.vercel.app
-**Synthesis Agent #35843** (Base Mainnet) | **ERC-8004 Agent #2221** (Ethereum Sepolia)
-
----
-
-## Why This Exists
-
-Free tools exist for security scanning. Semgrep, CodeQL, Snyk, Dependabot — a developer can add these to CI and catch known vulnerability patterns. But three problems remain unsolved:
-
-1. **No accountability.** When an automated tool reports (or misses) a vulnerability, there's no way to verify the tool's track record. A tool that hallucinates findings and a tool that catches real bugs look identical until something breaks in production.
-
-2. **No contextual reasoning.** SAST tools match patterns. They can't understand business logic, evaluate whether a "vulnerability" is actually exploitable in context, or propose fixes that preserve the code's intent.
-
-3. **No autonomous operation.** Existing tools require human setup, configuration, triage, and remediation. The gap between "tool finds a bug" and "bug gets fixed" is weeks to months.
-
-Forge Protocol closes all three gaps:
-
-- **On-chain accountability via ERC-8004.** Every audit builds verifiable reputation. Agent #2221's identity, every reputation score, and every audit attestation are recorded on Ethereum Sepolia — permanently, transparently, cryptographically signed. A developer can check an auditor's track record before trusting its findings.
-
-- **Hybrid deterministic + AI analysis.** Semgrep and custom SAST provide ground truth. Claude provides contextual reasoning. CVE databases provide known vulnerability data. The combination catches what either approach alone would miss.
-
-- **Full autonomy with self-correction.** Give it a repo URL. The Orchestrator plans, Scanner scans with real tools, Analyzer performs deep CWE analysis, Fixer generates patches, Reviewer validates — and if the Reviewer rejects, the Fixer automatically retries. No human in the loop.
-
-**No production system combines these three capabilities.** Autonomous security auditing with on-chain identity and verifiable reputation does not exist in the current tooling landscape.
+<p align="center">
+  <a href="https://sepolia.etherscan.io/tx/0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab">ERC-8004 Agent #2221</a> |
+  <a href="https://basescan.org/tx/0xc53f8a24b9d206c9134d986b7e4b5452a1d41e3e5a3e2f772d57b3c0d83cd977">Synthesis Agent #35843</a> |
+  <a href="https://github.com/ElijahUmana/forge-protocol/pull/7">Latest Audit PR</a>
+</p>
 
 ---
 
-## Architecture
-
-```
-                     USER INPUT (GitHub repo URL)
-                              |
-                     [Orchestrator Agent]
-                     Parses JSON plan dynamically
-                     Decides which agents to invoke
-                              |
-              +---------------+---------------+
-              |               |               |
-      [Scanner Agent]   [Analyzer Agent]  [Fixer Agent]
-      Runs 4 tools:     Deep CWE analysis  Generates fixes
-      - Semgrep SAST    Exploit scenarios   Follows code style
-      - Custom SAST     Impact assessment   Minimal diffs
-      - GitHub Advisory                          |
-      - GitHub API                          [Reviewer Agent]
-              |                             Approves/rejects
-              |                             If rejected:
-              |                             [Self-Correction]
-              |                             Fixer retries
-              |                                  |
-              +------ Inter-Agent Message Bus ---+
-              |       (typed: task_assignment,   |
-              |        result, feedback,         |
-              |        rejection, trust_query)   |
-              |                                  |
-         [ERC-8004 Trust Gate]           [x402 Payment Layer]
-         ownerOf() verification          Cost calculation
-         tokenURI() check                Payment headers
-         Dynamic reputation              Receipt verification
-              |                                  |
-         [On-Chain]                        [Output]
-         Identity Registry               Security report
-         Reputation Registry             GitHub PR
-         Ethereum Sepolia                agent_log.json
-```
-
-### Security Tool Stack (4 Ground-Truth Tools)
-
-| Tool | Type | What It Does |
-|------|------|-------------|
-| **Semgrep** (v1.156.0) | Production SAST | Runs real Semgrep rules against fetched source code in temp sandbox |
-| **Custom SAST** | Pattern scanner | 12 OWASP-aligned regex rules with CWE mapping (CWE-78 through CWE-942) |
-| **GitHub Advisory Database** | CVE lookup | Queries real known vulnerabilities for every npm dependency |
-| **GitHub API** | Code access | Fetches repository structure, source files, package manifests |
-
-These tools run BEFORE the AI analysis. Claude receives their results as ground truth and uses them alongside its own contextual reasoning. This hybrid approach means findings are backed by real evidence, not just LLM opinions.
+<p align="center">
+  <img src="public/forge_demo.png" alt="Forge Protocol Dashboard" width="800" />
+</p>
 
 ---
 
-## On-Chain Proof
+## The Problem No One Has Solved
 
-All verifiable on blockchain explorers:
+Every major tool can find bugs. GitHub Copilot Autofix, Snyk Agent Fix, OpenAI Aardvark, Semgrep, CodeQL -- they all scan code and report vulnerabilities. Some even generate fixes automatically.
 
-| Asset | Details | Link |
-|-------|---------|------|
-| **ERC-8004 Identity** | Agent #2221, Ethereum Sepolia | [View TX](https://sepolia.etherscan.io/tx/0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab) |
-| **Reputation Score** | 95/100 from independent Reviewer agent | [View TX](https://sepolia.etherscan.io/tx/0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929) |
-| **Synthesis Identity** | Agent #35843, Base Mainnet | [View TX](https://basescan.org/tx/0xc53f8a24b9d206c9134d986b7e4b5452a1d41e3e5a3e2f772d57b3c0d83cd977) |
-| **Reviewer Funding** | ETH transfer to reviewer wallet | [View TX](https://sepolia.etherscan.io/tx/0x1ee6e604344b0c8d3787ffa37ee43f84daec8aedb1dd0110948997c7f5679db3) |
+**But none of them can answer the most important question: "Should I trust this auditor?"**
 
-**Trust-gating in action:** Before agents collaborate, the Orchestrator queries `ownerOf()` on the ERC-8004 Identity Registry to verify the agent has a registered on-chain identity. Agents without verified identities are refused collaboration. This is checked every run (visible in agent_log.json).
+When an automated security tool reports a vulnerability, there is no way to verify:
+- Has this tool been reliable in the past?
+- What is its track record across hundreds of audits?
+- Can other automated systems trust its results without human verification?
+- If it misses a critical vulnerability, who is accountable?
 
-**Dynamic reputation:** After each audit, a reputation score is computed from actual results (number of findings, severity distribution, completion rate) and submitted to the Reputation Registry. This score is NOT hardcoded -- it varies based on audit quality.
+Today's AI security tools operate without identity, without reputation, and without accountability. They are anonymous black boxes that could hallucinate findings or miss real vulnerabilities -- and nobody would know until production breaks.
 
----
+## What Forge Protocol Does
 
-## API Endpoints
+Forge Protocol is the first autonomous security auditor where **every audit is accountable on-chain**.
+
+Give it any GitHub repository URL. Five specialized AI agents autonomously:
+
+1. **Plan** -- Orchestrator parses its own JSON strategy to decide which agents run and what to prioritize
+2. **Scan** -- Scanner runs 5 ground-truth tools: Semgrep 1.156.0, custom SAST (12 CWE-mapped OWASP rules), GitHub Advisory Database CVE lookup, GitHub API file analysis, and Claude AI reasoning
+3. **Analyze** -- Analyzer performs deep CWE analysis, maps exploit scenarios, assesses confidence levels
+4. **Fix** -- Fixer generates targeted code patches that preserve existing code style
+5. **Review** -- Reviewer validates every fix. If it rejects, the Fixer automatically retries with feedback (self-correction loop)
+6. **Ship** -- The system autonomously forks the target repository, creates an audit branch, commits a full SECURITY_AUDIT.md report, and opens a pull request
+
+**No human touches the keyboard between URL input and PR creation.**
+
+After the audit completes, a dynamic reputation score -- computed from actual findings, severity distribution, and pipeline completion rate -- is submitted to the ERC-8004 Reputation Registry on Ethereum Sepolia. Every audit builds verifiable, permanent, on-chain reputation.
+
+## What Makes This Different
+
+This is not another "AI finds bugs" tool. The differentiation is architectural:
+
+### On-Chain Accountability (ERC-8004)
+Every Forge Protocol agent has a registered ERC-8004 identity on Ethereum. Agent #2221's registration, every reputation score, and every audit attestation are permanently recorded on-chain. Before trusting an audit, anyone can verify the agent's track record on a blockchain explorer. No existing security tool offers this.
+
+- **Identity Registration**: [View on Etherscan](https://sepolia.etherscan.io/tx/0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab)
+- **Reputation Feedback** (from independent Reviewer agent): [View on Etherscan](https://sepolia.etherscan.io/tx/0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929)
+- **Synthesis Registration**: [View on Basescan](https://basescan.org/tx/0xc53f8a24b9d206c9134d986b7e4b5452a1d41e3e5a3e2f772d57b3c0d83cd977)
+
+### Trust-Gated Agent Collaboration
+Before agents accept work from each other, they verify on-chain identity via `ownerOf()` on the ERC-8004 Identity Registry. Unregistered agents are refused collaboration. This is not a claimed feature -- it executes on every pipeline run and is visible in the execution logs.
+
+### Hybrid Deterministic + AI Analysis
+Unlike pure-LLM tools that hallucinate vulnerabilities, Forge Protocol runs real security tools first:
+
+| Tool | Type | What It Provides |
+|------|------|-----------------|
+| **Semgrep 1.156.0** | Production SAST | Runs real Semgrep rules in a temp sandbox against fetched source code |
+| **Custom SAST** | Pattern Scanner | 12 OWASP-aligned regex rules with CWE mapping (CWE-78 through CWE-942) |
+| **GitHub Advisory Database** | CVE Lookup | Queries real known vulnerabilities for every npm dependency |
+| **GitHub API** | Code Access | Fetches repository structure, source files, package manifests |
+| **Claude API** | AI Reasoning | Deep contextual analysis with tool_use, informed by deterministic tool outputs |
+
+Deterministic tools provide evidence. AI provides context. The combination catches what either approach alone would miss.
+
+### Autonomous PR Creation
+The pipeline doesn't just report findings -- it acts on them. After the audit completes, it autonomously:
+1. Forks the target repository
+2. Creates a security audit branch
+3. Commits a detailed SECURITY_AUDIT.md report with all findings, severity ratings, and fix suggestions
+4. Opens a pull request
+
+**Example**: [PR #7 on forge-protocol](https://github.com/ElijahUmana/forge-protocol/pull/7)
+
+### Self-Correcting Pipeline
+When the Reviewer agent rejects the Fixer's proposed patches, the pipeline doesn't stop -- it triggers a self-correction loop. The Fixer automatically retries with the Reviewer's specific feedback, producing improved fixes. This is genuine autonomous decision-making, not scripted automation.
+
+### Inter-Agent Message Bus
+Agents communicate through a typed AgentMessageBus with structured messages (`task_assignment`, `result`, `feedback`, `rejection`, `trust_query`). Every delegation, trust verification, and verdict is logged and visible in the dashboard.
+
+### x402 Micropayments
+The `/api/run` endpoint implements x402 payment protocol headers. Agents can charge for audits via USDC payment proof, enabling agent-to-agent security-as-a-service commerce.
+
+## Real Results
+
+Latest autonomous audit of this repository (forge-protocol):
+
+- **14 findings**: 2 critical, 3 high, 5 medium
+- **6 pipeline steps**: Plan, Scan, Analyze, Fix, Review, Self-Correct
+- **PR created**: [github.com/ElijahUmana/forge-protocol/pull/7](https://github.com/ElijahUmana/forge-protocol/pull/7)
+- **Trust gate verified**: Agent #2221 identity confirmed via ownerOf()
+- **Dynamic reputation**: Score computed from actual audit metrics
+- **77 log entries**, 38 API calls
+
+See `agent_log.json` for the complete execution trace.
+
+## API
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/run` | Start security audit. Returns x402 payment headers. |
-| `GET` | `/api/run` | Poll pipeline status (with cached results fallback) |
-| `POST` | `/api/stream` | SSE stream of real-time pipeline updates |
-| `GET` | `/api/register` | Agent identity, balance, ERC-8004 IDs, TX hashes |
-| `POST` | `/api/register` | Register new ERC-8004 identity on-chain |
-| `POST` | `/api/create-pr` | Fork repo, create audit branch, open PR with findings |
-| `GET` | `/api/agent-log` | Full structured execution log |
-
-### x402 Micropayment Protocol
-
-The `/api/run` endpoint implements x402. Responses include:
-```
-X-Payment-Required: true
-X-Payment-Amount: 0.60
-X-Payment-Currency: USDC
-X-Payment-Chain: base
-X-Payment-Recipient: 0xad114d421E106a845b196BdBe527A9dc4b7e8EF5
-```
-
-Agents can pay for audits by including `X-Payment-Tx`, `X-Payment-Amount`, and `X-Payment-Payer` headers.
-
----
-
-## Demo: OWASP Juice Shop Audit
-
-Forge Protocol was pointed at [OWASP Juice Shop](https://github.com/juice-shop/juice-shop), a deliberately vulnerable web application used for security training. The autonomous pipeline produced:
-
-**12 real vulnerabilities found:**
-- **[CRITICAL]** Hardcoded encryption keys in repository
-- **[HIGH]** Vulnerable body-parser dependency causing DoS
-- **[HIGH]** Vulnerable colors.js dependency causing infinite loop DoS
-- **[HIGH]** Intentionally insecure JWT implementation
-- **[HIGH]** Weak password hashing implementation
-- **[MEDIUM]** SQL injection vulnerabilities
-- **[MEDIUM]** File upload vulnerabilities
-- **[MEDIUM]** Insecure direct object references
-- Plus 4 additional medium/low/info findings
-
-**Pipeline execution:**
-- 5 ground-truth tools: Semgrep 1.156.0 + custom SAST (12 rules) + GitHub Advisory Database + GitHub API + Claude
-- 6 pipeline steps: Plan, Scan, Analyze, Fix, Review, Self-Correct
-- Trust gate: Agent #2221 identity verified via ownerOf() before agent collaboration
-- Dynamic reputation: Score computed from actual audit metrics (not hardcoded)
-- Inter-agent messages: Structured delegations via AgentMessageBus
-- Autonomous PR creation: fork + audit branch + SECURITY_AUDIT.md + pull request
-- 56K tokens, 18 API calls, $0.51 total cost
-
-See `agent_log.json` for the complete execution trace with all 35+ log entries.
-
----
-
-## Inter-Agent Communication
-
-Agents communicate via typed messages through AgentMessageBus:
-
-```typescript
-interface AgentMessage {
-  from: AgentRole;       // "orchestrator" | "scanner" | "analyzer" | "fixer" | "reviewer"
-  to: AgentRole;
-  type: "task_assignment" | "result" | "feedback" | "rejection" | "trust_query";
-  payload: unknown;
-  timestamp: string;
-  messageId: string;
-}
-```
-
-Message flow per run:
-1. Orchestrator -> Scanner: `task_assignment` (repo to scan)
-2. Scanner -> Orchestrator: `result` (findings)
-3. Orchestrator -> Analyzer: `task_assignment` (critical findings)
-4. Fixer -> Reviewer: `result` (proposed fixes)
-5. Reviewer -> Fixer: `rejection` or `feedback` (triggers self-correction)
-
----
-
-## Safety and Guardrails
-
-| Guardrail | Mechanism |
-|-----------|-----------|
-| **ERC-8004 Trust Gate** | ownerOf() + tokenURI() verification before agent collaboration |
-| **Sensitive Path Blocking** | Agents cannot access .env, credentials, .git/config |
-| **File Size Truncation** | Files > 5KB truncated to prevent context overflow |
-| **Max Iteration Limits** | 10 tool-use iterations per agent (prevents infinite loops) |
-| **Compute Budget** | Token/API call/cost limits enforced; pipeline halts if exceeded |
-| **Review Gate** | All fixes require Reviewer approval; rejection triggers retry |
-| **Self-Correction** | Fixer automatically retries with Reviewer feedback on rejection |
-
----
+| `POST` | `/api/run` | Start audit (returns x402 payment headers) |
+| `GET` | `/api/run` | Get current/cached run status |
+| `POST` | `/api/stream` | SSE real-time pipeline updates |
+| `POST` | `/api/create-pr` | Create GitHub PR with audit report |
+| `GET` | `/api/register` | Agent identity + ERC-8004 info |
+| `POST` | `/api/register` | Register new ERC-8004 identity |
+| `GET` | `/api/agent-log` | Structured execution logs |
+| `POST` | `/api/summarize` | AI-generated audit summary |
 
 ## Quick Start
 
@@ -204,41 +132,25 @@ cp .env.example .env.local  # Add your API keys
 npm run dev                  # Open http://localhost:3000
 ```
 
-### Environment Variables
-
-```
-ANTHROPIC_API_KEY=           # Claude API for agent reasoning
-AGENT_PRIVATE_KEY=0x...      # EVM wallet for ERC-8004 transactions
-AGENT_ADDRESS=0x...          # Derived wallet address
-GITHUB_TOKEN=ghp_...         # GitHub API (higher rate limits + Advisory DB)
-```
-
----
-
 ## Tech Stack
 
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| Next.js | 16.2.1 | Full-stack framework |
-| TypeScript | 5.x | Language |
-| Tailwind CSS | 4.x | Styling |
-| Claude API | claude-sonnet-4 | Agent reasoning with tool_use |
-| Semgrep | 1.156.0 | Production SAST scanning |
-| viem | 2.47.6 | EVM/blockchain interaction |
-| ERC-8004 | Mainnet + Sepolia | On-chain agent identity and reputation |
-| GitHub API | v3 | Repository scanning, Advisory Database, PR creation |
-| x402 Protocol | - | Agent-to-agent micropayments |
-
----
+| Technology | Purpose |
+|-----------|---------|
+| Next.js 16 | Full-stack framework |
+| TypeScript | Language |
+| Claude API (Sonnet 4) | Agent reasoning with tool_use |
+| Semgrep 1.156.0 | Production SAST |
+| viem 2.47.6 | EVM/blockchain interaction |
+| ERC-8004 | On-chain agent identity + reputation |
+| GitHub API | Repository scanning, Advisory DB, PR creation |
+| x402 Protocol | Agent-to-agent micropayments |
+| Tailwind CSS | Styling |
 
 ## Submission Artifacts
 
-- `agent.json` -- Machine-readable capability manifest with ERC-8004 IDs and TX hashes
-- `agent_log.json` -- 49-entry structured execution log from real pipeline run
+- `agent.json` -- Machine-readable capability manifest with ERC-8004 IDs
+- `agent_log.json` -- 77-entry execution log from real pipeline run with PR link
 - `AGENTS.md` -- Full API documentation for agentic judges
-- Live deployment at https://forge-protocol-eight.vercel.app
-
----
 
 ## Team
 
