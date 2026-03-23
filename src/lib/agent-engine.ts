@@ -437,9 +437,24 @@ async function createSecurityPR(
       }
     }
 
-    // Construct URL as fallback if html_url still missing
-    const prUrl = prData.html_url ?? `https://github.com/${forkOwner}/${repo}/pull/${prData.number ?? "new"}`;
+    // Construct URL — always ensure we have a link
+    let prUrl = prData.html_url;
+    if (!prUrl && prData.number) {
+      prUrl = `https://github.com/${forkOwner}/${repo}/pull/${prData.number}`;
+    }
+    if (!prUrl) {
+      // Last resort: list all open PRs and find the one we just created
+      const allPrsRes = await fetch(`https://api.github.com/repos/${forkOwner}/${repo}/pulls?state=open&sort=created&direction=desc&per_page=1`, { headers });
+      const allPrs = await allPrsRes.json();
+      if (Array.isArray(allPrs) && allPrs.length > 0) {
+        prUrl = allPrs[0].html_url;
+      }
+    }
+    if (!prUrl) {
+      prUrl = `https://github.com/${forkOwner}/${repo}/pulls`;
+    }
 
+    console.log("[Forge PR] Created PR:", prUrl);
     return { success: true, prUrl, prNumber: prData.number ?? undefined, branch: branchName };
   } catch (err) {
     return { success: false, error: String(err) };
@@ -1158,7 +1173,7 @@ Return JSON with: fixedCode, explanation, filesChanged.`,
 
         const fixerOutput = run.steps.find((s) => s.agent === "fixer")?.output;
         const prResult = await createSecurityPR(owner, repo, run.findings, typeof fixerOutput === "string" ? fixerOutput : JSON.stringify(fixerOutput ?? ""));
-        if (prResult.success) {
+        if (prResult.success && prResult.prUrl) {
           logger.log("orchestrator", "tool_call", "github_create_pr", {
             prUrl: prResult.prUrl,
             prNumber: prResult.prNumber,
@@ -1166,14 +1181,16 @@ Return JSON with: fixedCode, explanation, filesChanged.`,
           });
           run.erc8004Txs.push({
             type: "validation_request" as const,
-            hash: prResult.prUrl ?? "",
+            hash: prResult.prUrl,
             chain: "github",
             status: "confirmed",
             timestamp: new Date().toISOString(),
             details: { prUrl: prResult.prUrl, findingsCount: run.findings.length },
           });
+          // Emit update so frontend sees PR BEFORE "completed" status
+          emitUpdate();
         } else {
-          logger.log("orchestrator", "error", "PR creation failed", { error: prResult.error });
+          logger.log("orchestrator", "error", "PR creation returned no URL", { result: prResult });
         }
       } catch (err) {
         logger.log("orchestrator", "error", "PR creation failed", { error: String(err) });
