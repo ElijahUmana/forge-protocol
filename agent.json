@@ -8,11 +8,15 @@
     "contact": "elijah@uni.minerva.edu"
   },
   "erc8004": {
-    "chain": "base-sepolia",
-    "chainId": 84532,
+    "chain": "ethereum-sepolia",
+    "chainId": 11155111,
     "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
-    "agentId": null
+    "agentId": 2221,
+    "registrationTx": "0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab",
+    "reputationTx": "0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929",
+    "synthesisAgentId": 35843,
+    "synthesisRegistrationTx": "0xc53f8a24b9d206c9134d986b7e4b5452a1d41e3e5a3e2f772d57b3c0d83cd977"
   },
   "agents": [
     {

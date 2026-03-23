@@ -6,13 +6,14 @@ import {
   type Hash,
   type Address,
 } from "viem";
-import { baseSepolia } from "viem/chains";
+import { sepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 
 const IDENTITY_REGISTRY: Address = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY: Address = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 
-const RPC_URL = "https://sepolia.base.org";
+// Using Ethereum Sepolia (same ERC-8004 contract addresses deployed across all testnets)
+const RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com";
 
 function getClients() {
   const privateKey = process.env.AGENT_PRIVATE_KEY as `0x${string}`;
@@ -20,12 +21,12 @@ function getClients() {
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: sepolia,
     transport: http(RPC_URL),
   });
   const walletClient = createWalletClient({
     account,
-    chain: baseSepolia,
+    chain: sepolia,
     transport: http(RPC_URL),
   });
   return { publicClient, walletClient, account };
