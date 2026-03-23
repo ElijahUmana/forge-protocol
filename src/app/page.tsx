@@ -170,7 +170,7 @@ export default function Dashboard() {
         findings: run.findings.length,
         critical: run.findings.filter(f => f.severity === "critical").length,
         date: run.completedAt ?? new Date().toISOString(),
-        prUrl: run.erc8004Txs?.find(tx => tx.chain === "github")?.hash,
+        prUrl: prUrl || undefined,
       };
       setRunHistory(prev => {
         // Deduplicate: only keep one entry per repo per 5-minute window
@@ -240,6 +240,11 @@ export default function Dashboard() {
   const highCount = run?.findings.filter(f => f.severity === "high").length ?? 0;
   const medCount = run?.findings.filter(f => f.severity === "medium").length ?? 0;
   const activeAgent = run?.steps.find(s => s.status === "in_progress")?.agent;
+
+  // Extract PR URL from erc8004Txs OR from log entries (fallback)
+  const prUrlFromTx = run?.erc8004Txs?.find(tx => tx.chain === "github")?.hash;
+  const prUrlFromLog = run?.log?.find(e => e.action === "github_create_pr" && e.details)?.details;
+  const prUrl = prUrlFromTx || (prUrlFromLog as Record<string, unknown>)?.prUrl as string | undefined;
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100">
@@ -540,32 +545,26 @@ export default function Dashboard() {
                         <div className="text-[10px] text-zinc-600">Generating AI summary...</div>
                       </div>
                     )}
-                    {/* PR Link — Prominently displayed */}
-                    {run.erc8004Txs?.some(tx => tx.chain === "github") && (
+                    {/* PR Link */}
+                    {prUrl ? (
                       <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-green-500/10 border border-blue-500/20 mb-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl">&#9998;</div>
                           <div className="flex-1">
                             <div className="text-sm font-semibold text-blue-400">Autonomous PR Created</div>
                             <p className="text-[10px] text-zinc-500 mb-1">Security audit report committed to target repository</p>
-                            <a href={run.erc8004Txs.find(tx => tx.chain === "github")?.hash} target="_blank" rel="noopener noreferrer"
+                            <a href={prUrl} target="_blank" rel="noopener noreferrer"
                               className="text-xs text-blue-300 hover:text-blue-200 underline transition-colors">
-                              {run.erc8004Txs.find(tx => tx.chain === "github")?.hash ?? "View Pull Request"} &#8599;
+                              {prUrl} &#8599;
                             </a>
                           </div>
                         </div>
                       </div>
-                    )}
-                    {!run.erc8004Txs?.some(tx => tx.chain === "github") && run.status === "completed" && (
-                      <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 mb-3">
-                        <div className="text-xs text-zinc-500">PR creation completed — check the History tab or your GitHub notifications for the audit PR</div>
-                      </div>
-                    )}
-                    {!run.erc8004Txs?.some(tx => tx.chain === "github") && run.status !== "completed" && (
+                    ) : run.status !== "completed" ? (
                       <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 mb-3 animate-pulse">
                         <div className="text-xs text-zinc-500">PR will be created after pipeline completes...</div>
                       </div>
-                    )}
+                    ) : null}
                     {/* On-chain proof links */}
                     <div className="flex gap-2 mt-3">
                       <a href="https://sepolia.etherscan.io/tx/0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab" target="_blank" rel="noopener noreferrer"
