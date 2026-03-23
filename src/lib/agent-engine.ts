@@ -7,7 +7,7 @@ import type {
   TaskStep,
   OnchainTx,
 } from "./types";
-import { AgentLogger } from "./logger";
+import { AgentLogger, createLogger } from "./logger";
 import { registerAgentIdentity, giveFeedback, getAgentAddress } from "./erc8004";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -339,11 +339,7 @@ export async function runForgeProtocol(
   config: AgentRunConfig,
   onUpdate: (run: ExecutionRun) => void
 ): Promise<ExecutionRun> {
-  const logger = new AgentLogger(
-    config.maxTokens ?? 500000,
-    config.maxApiCalls ?? 100,
-    (config.maxDurationMinutes ?? 30) * 60 * 1000
-  );
+  const logger = createLogger();
   const startedAt = new Date().toISOString();
   const runId = `forge-${Date.now()}`;
   const { owner, repo } = parseGitHubUrl(config.targetRepo);
@@ -462,9 +458,9 @@ Return your findings as a JSON array.`,
     emitUpdate();
 
     // === STEP 3: Analyzer performs deep analysis on top findings ===
-    const topFindings = run.findings.filter(
-      (f) => f.severity === "critical" || f.severity === "high"
-    ).slice(0, 3);
+    const topFindings = run.findings
+      .filter((f) => f.severity === "critical" || f.severity === "high" || f.severity === "medium")
+      .slice(0, 3);
 
     if (topFindings.length > 0) {
       const analyzeStep: TaskStep = {
