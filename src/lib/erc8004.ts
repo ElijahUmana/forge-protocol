@@ -140,4 +140,44 @@ export function getAgentAddress(): string {
   return process.env.AGENT_ADDRESS ?? "0x0000000000000000000000000000000000000000";
 }
 
+// Trust-gating: check if an agent's reputation meets the minimum threshold
+export async function checkAgentTrust(
+  agentId: bigint,
+  minScore: number,
+  tag: string,
+): Promise<{ trusted: boolean; score: number; count: number; reason: string }> {
+  try {
+    const summary = await getReputationSummary(agentId, tag, "");
+    const score = Number(summary.summaryValue);
+    const count = Number(summary.count);
+
+    if (count === 0) {
+      return {
+        trusted: true, // New agents get benefit of the doubt
+        score: 0,
+        count: 0,
+        reason: "No reputation history — granting provisional trust",
+      };
+    }
+
+    const trusted = score >= minScore;
+    return {
+      trusted,
+      score,
+      count,
+      reason: trusted
+        ? `Agent reputation ${score}/${100} meets threshold ${minScore}`
+        : `Agent reputation ${score}/${100} BELOW threshold ${minScore} — REFUSING collaboration`,
+    };
+  } catch {
+    // If reputation check fails, allow with warning
+    return {
+      trusted: true,
+      score: -1,
+      count: 0,
+      reason: "Reputation check failed (network error) — proceeding with caution",
+    };
+  }
+}
+
 export { IDENTITY_REGISTRY, REPUTATION_REGISTRY, RPC_URL };

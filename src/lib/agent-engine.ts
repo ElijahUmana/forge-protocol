@@ -8,7 +8,7 @@ import type {
   OnchainTx,
 } from "./types";
 import { AgentLogger, createLogger } from "./logger";
-import { registerAgentIdentity, giveFeedback, getAgentAddress } from "./erc8004";
+import { registerAgentIdentity, giveFeedback, getAgentAddress, checkAgentTrust } from "./erc8004";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -584,6 +584,29 @@ Each element: {"severity":"critical|high|medium|low|info","title":"...","descrip
     }
     emitUpdate();
 
+    // === ERC-8004 Trust Gate: Check agent reputation before proceeding ===
+    try {
+      const trustCheck = await checkAgentTrust(BigInt(2221), 50, "audit_quality");
+      logger.log("orchestrator", "reputation", `Trust gate check for Agent #2221`, {
+        ...trustCheck,
+        agentId: 2221,
+        threshold: 50,
+      });
+      if (!trustCheck.trusted) {
+        logger.log("orchestrator", "guardrail", "BLOCKED: Agent failed trust gate", {
+          reason: trustCheck.reason,
+        });
+        run.status = "failed";
+        run.completedAt = new Date().toISOString();
+        emitUpdate();
+        return run;
+      }
+    } catch (err) {
+      logger.log("orchestrator", "error", "Trust gate check failed — proceeding with caution", {
+        error: String(err),
+      });
+    }
+
     // === STEP 3: Analyzer performs deep analysis on top findings ===
     const topFindings = run.findings
       .filter((f) => f.severity === "critical" || f.severity === "high" || f.severity === "medium")
@@ -697,6 +720,50 @@ Give approval/rejection with reasoning for each.`,
           reviewStep.status = "completed";
           reviewStep.completedAt = new Date().toISOString();
           emitUpdate();
+
+          // === SELF-CORRECTION: If reviewer rejects, fixer retries ===
+          const isRejected = reviewResult.toLowerCase().includes('"approved":false') ||
+            reviewResult.toLowerCase().includes('"approved": false') ||
+            reviewResult.toLowerCase().includes('reject');
+
+          if (isRejected && !logger.isBudgetExceeded()) {
+            logger.log("orchestrator", "decision", "Reviewer rejected fixes — triggering self-correction loop", {});
+
+            const retryStep: TaskStep = {
+              id: "step-5b-retry",
+              agent: "fixer",
+              action: "Self-correction: retry rejected fixes",
+              status: "in_progress",
+              input: { reviewFeedback: reviewResult },
+              output: null,
+              startedAt: new Date().toISOString(),
+              completedAt: null,
+              tokensUsed: 0,
+              toolCalls: [],
+            };
+            run.steps.push(retryStep);
+            emitUpdate();
+
+            const retryResult = await runAgent(
+              "fixer",
+              `Your previous fixes were REJECTED by the Reviewer. Here is the feedback:
+
+${reviewResult}
+
+Original findings: ${JSON.stringify(topFindings, null, 2)}
+
+Generate IMPROVED fixes that address the reviewer's concerns. Be more careful and targeted.
+Return JSON with: fixedCode, explanation, filesChanged.`,
+              logger,
+              false
+            );
+
+            retryStep.output = retryResult;
+            retryStep.status = "completed";
+            retryStep.completedAt = new Date().toISOString();
+            logger.log("fixer", "decision", "Self-correction complete — revised fixes generated", {});
+            emitUpdate();
+          }
         }
       }
     }
