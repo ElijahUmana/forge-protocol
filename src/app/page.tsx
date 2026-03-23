@@ -130,9 +130,13 @@ export default function Dashboard() {
   // Load history from localStorage + cached server results
   useEffect(() => {
     fetch("/api/register").then(r => r.json()).then(setWallet).catch(() => {});
-    fetch("/api/run").then(r => r.json()).then(data => {
-      if (data.run?.findings?.length > 0) setRun(data.run);
-    }).catch(() => {});
+    // Only load cached results if user already has a session (returning user)
+    const existingUser = localStorage.getItem("forge-user");
+    if (existingUser) {
+      fetch("/api/run").then(r => r.json()).then(data => {
+        if (data.run?.findings?.length > 0) setRun(data.run);
+      }).catch(() => {});
+    }
     // Load saved history + user name
     try {
       const saved = localStorage.getItem("forge-history");
@@ -169,7 +173,13 @@ export default function Dashboard() {
         prUrl: run.erc8004Txs?.find(tx => tx.chain === "github")?.hash,
       };
       setRunHistory(prev => {
-        const updated = [entry, ...prev.filter(h => h.repo !== entry.repo || h.date !== entry.date)].slice(0, 20);
+        // Deduplicate: only keep one entry per repo per 5-minute window
+        const entryTime = new Date(entry.date).getTime();
+        const filtered = prev.filter(h => {
+          const hTime = new Date(h.date).getTime();
+          return h.repo !== entry.repo || Math.abs(hTime - entryTime) > 5 * 60 * 1000;
+        });
+        const updated = [entry, ...filtered].slice(0, 10);
         try { localStorage.setItem("forge-history", JSON.stringify(updated)); } catch { /* ignore */ }
         return updated;
       });
@@ -248,12 +258,17 @@ export default function Dashboard() {
                   setUserName(name);
                   setShowNamePrompt(false);
                   localStorage.setItem("forge-user", name);
+                  // New user = clean state — don't show someone else's cached run
+                  setRun(null);
+                  setAuditSummary(null);
                 }
               }} />
             <p className="text-[10px] text-zinc-600">Your session history will be saved locally.</p>
           </div>
         </div>
       )}
+
+      {/* New user gets clean state — no leftover cached data */}
 
       {/* Header */}
       <header className="border-b border-zinc-800/50 px-6 py-3 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-50">
@@ -354,21 +369,23 @@ export default function Dashboard() {
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Agent Pipeline</h3>
                     {isRunning && <span className="text-[10px] text-amber-400 animate-pulse">LIVE</span>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {run?.steps.map((step, i) => (
-                      <div key={step.id} className="flex items-center gap-2 flex-1">
-                        <div className={`flex items-center gap-2 flex-1 p-3 rounded-lg border transition-all ${step.status === "completed" ? "bg-zinc-800/30 border-zinc-700/50" : step.status === "in_progress" ? "bg-zinc-800/50 border-violet-500/30 shadow-lg shadow-violet-500/5" : "bg-zinc-900 border-zinc-800/30"}`}>
-                          <AgentIcon agent={step.agent} size={28} active={step.status === "in_progress"} />
-                          <div className="min-w-0 flex-1">
-                            <div className={`text-[11px] font-semibold capitalize ${AGENT_CONFIG[step.agent]?.color ?? "text-zinc-400"}`}>{step.agent}</div>
-                            <div className="text-[10px] text-zinc-600 truncate">{step.action}</div>
-                          </div>
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${step.status === "completed" ? "bg-green-500" : step.status === "in_progress" ? "bg-amber-500 animate-pulse" : "bg-zinc-700"}`} />
+                  <div className="grid grid-cols-3 gap-2">
+                    {run?.steps.map((step) => (
+                      <div key={step.id} className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${step.status === "completed" ? "bg-zinc-800/30 border-zinc-700/50" : step.status === "in_progress" ? "bg-zinc-800/50 border-violet-500/30 shadow-lg shadow-violet-500/5" : "bg-zinc-900 border-zinc-800/30"}`}>
+                        <AgentIcon agent={step.agent} size={28} active={step.status === "in_progress"} />
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-[11px] font-semibold capitalize ${AGENT_CONFIG[step.agent]?.color ?? "text-zinc-400"}`}>{step.agent}</div>
+                          <div className="text-[10px] text-zinc-600 truncate">{step.action}</div>
                         </div>
-                        {i < (run?.steps.length ?? 0) - 1 && <div className="text-zinc-700 shrink-0">&#8594;</div>}
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${step.status === "completed" ? "bg-green-500" : step.status === "in_progress" ? "bg-amber-500 animate-pulse" : "bg-zinc-700"}`} />
                       </div>
                     ))}
-                    {isRunning && <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-zinc-800 opacity-50"><div className="w-7 h-7 rounded-lg bg-zinc-800 animate-pulse" /><div className="text-[10px] text-zinc-600">Next...</div></div>}
+                    {isRunning && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-zinc-800 opacity-50 animate-pulse">
+                        <div className="w-7 h-7 rounded-lg bg-zinc-800" />
+                        <div className="text-[10px] text-zinc-600">Working...</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -498,6 +515,7 @@ export default function Dashboard() {
                     <div className="space-y-2">
                       {run.log
                         .filter(e => e.type === "delegation" || e.type === "reputation" || e.action.toLowerCase().includes("message bus") || e.action.toLowerCase().includes("trust gate") || e.action.toLowerCase().includes("self-correction") || e.action.toLowerCase().includes("pr"))
+                        .filter((e, i, arr) => arr.findIndex(x => x.action === e.action && x.agent === e.agent) === i) // deduplicate
                         .slice(0, 8)
                         .map((e, i) => {
                           const cfg = AGENT_CONFIG[e.agent] ?? AGENT_CONFIG.orchestrator;

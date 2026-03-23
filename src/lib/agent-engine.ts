@@ -399,8 +399,11 @@ async function createSecurityPR(
       body: JSON.stringify({ message: "feat: add Forge Protocol security audit report", content: Buffer.from(report).toString("base64"), branch: branchName }),
     });
 
-    // Create PR
-    const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+    // Create PR — try upstream first, fallback to fork
+    let prData: { html_url?: string; number?: number; message?: string } = {};
+
+    // Try PR to upstream repo
+    const upstreamPrRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
       method: "POST", headers,
       body: JSON.stringify({
         title: `[Forge Protocol] Security Audit: ${findings.length} findings`,
@@ -409,9 +412,23 @@ async function createSecurityPR(
         base: defaultBranch,
       }),
     });
-    const prData = await prRes.json();
+    prData = await upstreamPrRes.json();
 
-    return { success: true, prUrl: prData.html_url, prNumber: prData.number, branch: branchName };
+    // If upstream PR fails, create PR in our fork instead
+    if (!prData.html_url) {
+      const forkPrRes = await fetch(`https://api.github.com/repos/${forkOwner}/${repo}/pulls`, {
+        method: "POST", headers,
+        body: JSON.stringify({
+          title: `[Forge Protocol] Security Audit: ${findings.length} findings`,
+          body: `Autonomous security audit by [Forge Protocol](https://github.com/ElijahUmana/forge-protocol) (Agent #2221, ERC-8004).\n\n**${findings.length} findings** (${findings.filter(f => f.severity === "critical").length} critical, ${findings.filter(f => f.severity === "high").length} high)\n\nSee \`SECURITY_AUDIT.md\` for full report.`,
+          head: branchName,
+          base: defaultBranch,
+        }),
+      });
+      prData = await forkPrRes.json();
+    }
+
+    return { success: true, prUrl: prData.html_url ?? undefined, prNumber: prData.number ?? undefined, branch: branchName };
   } catch (err) {
     return { success: false, error: String(err) };
   }
