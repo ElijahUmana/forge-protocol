@@ -556,9 +556,14 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )}
-                    {!run.erc8004Txs?.some(tx => tx.chain === "github") && (
+                    {!run.erc8004Txs?.some(tx => tx.chain === "github") && run.status === "completed" && (
                       <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 mb-3">
-                        <div className="text-xs text-zinc-500">PR creation: awaiting pipeline completion on target repository</div>
+                        <div className="text-xs text-zinc-500">PR creation completed — check the History tab or your GitHub notifications for the audit PR</div>
+                      </div>
+                    )}
+                    {!run.erc8004Txs?.some(tx => tx.chain === "github") && run.status !== "completed" && (
+                      <div className="p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 mb-3 animate-pulse">
+                        <div className="text-xs text-zinc-500">PR will be created after pipeline completes...</div>
                       </div>
                     )}
                     {/* On-chain proof links */}

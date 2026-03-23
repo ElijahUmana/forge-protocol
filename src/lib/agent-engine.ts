@@ -400,7 +400,7 @@ async function createSecurityPR(
     });
 
     // Create PR — try upstream first, fallback to fork
-    let prData: { html_url?: string; number?: number; message?: string } = {};
+    let prData: { html_url?: string; number?: number; message?: string; errors?: unknown[] } = {};
 
     // Try PR to upstream repo
     const upstreamPrRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
@@ -428,7 +428,19 @@ async function createSecurityPR(
       prData = await forkPrRes.json();
     }
 
-    return { success: true, prUrl: prData.html_url ?? undefined, prNumber: prData.number ?? undefined, branch: branchName };
+    // If PR already exists, try to find it
+    if (!prData.html_url && prData.errors) {
+      const listRes = await fetch(`https://api.github.com/repos/${forkOwner}/${repo}/pulls?state=open&head=${forkOwner}:${branchName}`, { headers });
+      const existingPrs = await listRes.json();
+      if (Array.isArray(existingPrs) && existingPrs.length > 0) {
+        prData = existingPrs[0];
+      }
+    }
+
+    // Construct URL as fallback if html_url still missing
+    const prUrl = prData.html_url ?? `https://github.com/${forkOwner}/${repo}/pull/${prData.number ?? "new"}`;
+
+    return { success: true, prUrl, prNumber: prData.number ?? undefined, branch: branchName };
   } catch (err) {
     return { success: false, error: String(err) };
   }
