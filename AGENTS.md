@@ -2,7 +2,7 @@
 
 ## What This System Does
 
-Forge Protocol is an autonomous multi-agent security auditor. Give it a GitHub repository URL, and five specialized AI agents will independently discover, analyze, and fix security vulnerabilities — without human intervention.
+Forge Protocol is an autonomous multi-agent security auditor combining deterministic SAST scanning, real CVE lookups, and AI reasoning — with ERC-8004 trust-gated collaboration, dynamic on-chain reputation, x402 micropayments, and autonomous PR creation. Give it a GitHub repository URL and watch agents plan, scan, analyze, fix, verify, and self-correct — without human intervention.
 
 ## How to Interact
 
@@ -43,7 +43,28 @@ Returns the agent's wallet address, Base Sepolia ETH balance, and ERC-8004 regis
 ```bash
 POST /api/register
 ```
-Registers the agent's identity on the ERC-8004 Identity Registry on Base Sepolia. Requires Base Sepolia ETH for gas.
+Registers the agent's identity on the ERC-8004 Identity Registry on Ethereum Sepolia.
+
+**Real-time SSE streaming:**
+```bash
+POST /api/stream
+Content-Type: application/json
+
+{"targetRepo": "https://github.com/owner/repo"}
+```
+Returns a Server-Sent Events stream with real-time pipeline updates. Events: `connected`, `update` (per-step progress), `complete` (final results), `error`.
+
+**Create GitHub PR with fixes:**
+```bash
+POST /api/create-pr
+Content-Type: application/json
+
+{"owner": "repo-owner", "repo": "repo-name", "findings": [...], "fixes": "..."}
+```
+Forks the target repo, creates a security audit branch, commits SECURITY_AUDIT.md, and opens a PR.
+
+**x402 Micropayments:**
+The `/api/run` endpoint supports x402 payment protocol headers. When a run starts, the response includes `X-Payment-Required`, `X-Payment-Amount`, `X-Payment-Currency`, and `X-Payment-Recipient` headers. Send payment proof via `X-Payment-Tx` header.
 
 ### Web Dashboard
 
@@ -67,6 +88,24 @@ Five agents operate in a sequential pipeline:
 4. **Fixer** — Generates minimal, targeted code fixes for confirmed vulnerabilities. Follows existing code style and ensures fixes don't introduce regressions.
 
 5. **Reviewer** — Validates proposed fixes for correctness, evaluates quality, and gates approval before any changes are applied.
+
+## Inter-Agent Communication
+
+Agents communicate via a structured message bus (AgentMessageBus) with typed messages:
+- `task_assignment`: Orchestrator assigns work to specialized agents
+- `result`: Agent sends completed work back
+- `feedback`: Reviewer sends approval/rejection feedback
+- `rejection`: Triggers self-correction loop in Fixer
+- `trust_query` / `trust_response`: ERC-8004 reputation verification
+
+Message format: `{from, to, type, payload, timestamp, messageId}`
+
+## Ground-Truth Security Tools
+
+Three deterministic tools run alongside AI analysis:
+1. **SAST Pattern Scanner**: 12 OWASP-aligned rules (CWE-mapped) detect hardcoded secrets, SQL injection, XSS, command injection, eval usage, insecure crypto, path traversal
+2. **GitHub Advisory Database**: Real CVE lookups against known vulnerabilities in npm dependencies
+3. **GitHub API**: Repository structure and source code fetching
 
 ## Safety Guardrails
 

@@ -7,6 +7,7 @@ import type {
   TaskStep,
   OnchainTx,
 } from "./types";
+import { AgentMessageBus } from "./types";
 import { AgentLogger, createLogger } from "./logger";
 import { registerAgentIdentity, giveFeedback, getAgentAddress, checkAgentTrust } from "./erc8004";
 import { runSAST, type SASTFinding } from "./sast";
@@ -361,6 +362,7 @@ export async function runForgeProtocol(
   onUpdate: (run: ExecutionRun) => void
 ): Promise<ExecutionRun> {
   const logger = createLogger();
+  const messageBus = new AgentMessageBus();
   const startedAt = new Date().toISOString();
   const runId = `forge-${Date.now()}`;
   const { owner, repo } = parseGitHubUrl(config.targetRepo);
@@ -432,6 +434,17 @@ Return ONLY the JSON object, no markdown.`,
     planStep.output = planResult;
     planStep.status = "completed";
     planStep.completedAt = new Date().toISOString();
+
+    // Inter-agent message: Orchestrator assigns task to Scanner
+    messageBus.send({
+      from: "orchestrator",
+      to: "scanner",
+      type: "task_assignment",
+      payload: { targetRepo: config.targetRepo, owner, repo, plan: planResult },
+    });
+    logger.log("orchestrator", "delegation", "Sent task assignment to Scanner via message bus", {
+      messageCount: messageBus.getMessages().length,
+    });
 
     // Parse Orchestrator's plan to DYNAMICALLY drive the pipeline
     let plan = {
@@ -671,6 +684,18 @@ Each element: {"severity":"critical|high|medium|low|info","title":"...","descrip
     scanStep.output = scanResult;
     scanStep.status = "completed";
     scanStep.completedAt = new Date().toISOString();
+
+    // Inter-agent message: Scanner sends results to Orchestrator
+    messageBus.send({
+      from: "scanner",
+      to: "orchestrator",
+      type: "result",
+      payload: { findingsCount: run.findings.length, severities: run.findings.map(f => f.severity) },
+    });
+    logger.log("scanner", "delegation", "Sent scan results to Orchestrator via message bus", {
+      findingsCount: run.findings.length,
+      messageCount: messageBus.getMessages().length,
+    });
 
     // Parse findings from scanner output
     try {
@@ -940,6 +965,54 @@ Return JSON with: fixedCode, explanation, filesChanged.`,
       });
     }
 
+    // === STEP 7: Autonomous PR Creation ===
+    if (run.findings.length > 0 && process.env.GITHUB_TOKEN && !logger.isBudgetExceeded()) {
+      try {
+        logger.log("orchestrator", "decision", "Creating GitHub PR with security audit report", {
+          owner,
+          repo,
+          findingsCount: run.findings.length,
+        });
+
+        // Send inter-agent message
+        messageBus.send({
+          from: "orchestrator",
+          to: "reviewer",
+          type: "task_assignment",
+          payload: { action: "create_pr", owner, repo, findingsCount: run.findings.length },
+        });
+
+        const prRes = await fetch(`${process.env.NEXT_PUBLIC_DEPLOYMENT_URL || "http://localhost:3000"}/api/create-pr`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            owner,
+            repo,
+            findings: run.findings,
+            fixes: run.steps.find((s) => s.agent === "fixer")?.output ?? "",
+          }),
+        });
+
+        if (prRes.ok) {
+          const prData = await prRes.json();
+          logger.log("orchestrator", "tool_call", "github_create_pr", {
+            prUrl: prData.prUrl,
+            prNumber: prData.prNumber,
+            branch: prData.branch,
+          });
+        }
+      } catch (err) {
+        logger.log("orchestrator", "error", "PR creation failed", { error: String(err) });
+      }
+    }
+
+    // Log inter-agent communication summary
+    const allMessages = messageBus.getMessages();
+    logger.log("orchestrator", "decision", "Inter-agent communication summary", {
+      totalMessages: allMessages.length,
+      messageTypes: allMessages.map((m) => `${m.from}->${m.to}:${m.type}`),
+    });
+
     // Complete the run
     run.status = "completed";
     run.completedAt = new Date().toISOString();
@@ -949,6 +1022,7 @@ Return JSON with: fixedCode, explanation, filesChanged.`,
       totalFindings: run.findings.length,
       criticalFindings: run.findings.filter((f) => f.severity === "critical").length,
       stepsCompleted: run.steps.filter((s) => s.status === "completed").length,
+      interAgentMessages: allMessages.length,
       budget: logger.getBudget(),
     });
   } catch (err) {

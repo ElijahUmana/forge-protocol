@@ -3,6 +3,7 @@ import { runForgeProtocol } from "@/lib/agent-engine";
 import type { AgentRunConfig, ExecutionRun } from "@/lib/types";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { createX402Headers, verifyX402Payment, calculateAuditCost } from "@/lib/x402";
 
 // Allow up to 300s for pipeline execution (Vercel Pro) or 60s (Hobby)
 export const maxDuration = 300;
@@ -70,6 +71,20 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid GitHub repository URL" }, { status: 400 });
   }
 
+  // x402 Payment Protocol: check for payment or return payment-required headers
+  const auditCost = calculateAuditCost(10, 2000, "standard"); // Default estimate
+  const paymentCheck = verifyX402Payment(request.headers);
+  const x402Info = {
+    paymentRequired: !paymentCheck.paid,
+    cost: auditCost,
+    currency: "USDC",
+    chain: "base",
+    recipient: process.env.AGENT_ADDRESS ?? "0xad114d421E106a845b196BdBe527A9dc4b7e8EF5",
+    receipt: paymentCheck.receipt,
+    // For hackathon demo: proceed even without payment, but log it
+    proceeding: true,
+  };
+
   // Start the run — on Vercel this runs within the function's maxDuration
   currentRun = null;
   const runPromise = runForgeProtocol(config, (update) => {
@@ -86,7 +101,13 @@ export async function POST(request: NextRequest) {
     console.error("Run failed:", err);
   });
 
-  return Response.json({ started: true, message: "Forge Protocol pipeline started" });
+  return Response.json({
+    started: true,
+    message: "Forge Protocol pipeline started",
+    x402: x402Info,
+  }, {
+    headers: paymentCheck.paid ? {} : createX402Headers(auditCost, x402Info.recipient),
+  });
 }
 
 export async function GET() {

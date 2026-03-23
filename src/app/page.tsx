@@ -77,48 +77,123 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "logs" | "findings" | "identity">("overview");
   const [registerResult, setRegisterResult] = useState<string | null>(null);
 
-  // Fetch wallet info on mount
+  // Fetch wallet info and cached results on mount
   useEffect(() => {
     fetch("/api/register")
       .then((r) => r.json())
       .then(setWallet)
       .catch(() => {});
+    // Load cached run results so judges see data immediately
+    fetch("/api/run")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.run && data.run.findings?.length > 0) {
+          setRun(data.run);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  // Poll for run status
-  const pollStatus = useCallback(() => {
-    if (!isRunning) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("/api/run");
-        const data = await res.json();
-        if (data.run) {
-          setRun(data.run);
-          if (data.run.status !== "running") {
-            setIsRunning(false);
-            clearInterval(interval);
+  // Use SSE streaming for real-time updates (falls back to polling)
+  const startRunWithSSE = useCallback(async (targetRepo: string) => {
+    setIsRunning(true);
+    setRun(null);
+
+    try {
+      const res = await fetch("/api/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetRepo }),
+      });
+
+      if (!res.ok || !res.body) {
+        // Fallback to polling mode
+        await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetRepo }),
+        });
+        // Poll
+        const interval = setInterval(async () => {
+          const pollRes = await fetch("/api/run");
+          const data = await pollRes.json();
+          if (data.run) {
+            setRun(data.run);
+            if (data.run.status !== "running") {
+              setIsRunning(false);
+              clearInterval(interval);
+            }
+          }
+        }, 2000);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const eventData = JSON.parse(line.slice(6));
+              if (eventData.findings) {
+                // Complete event — update with full data
+                setRun((prev) => ({
+                  ...(prev ?? {} as RunData),
+                  status: eventData.status ?? "completed",
+                  findings: eventData.findings ?? prev?.findings ?? [],
+                  budget: eventData.budget ?? prev?.budget ?? {} as Budget,
+                  erc8004Txs: eventData.erc8004Txs ?? prev?.erc8004Txs ?? [],
+                  log: prev?.log ?? [],
+                  steps: prev?.steps ?? [],
+                }) as RunData);
+                setIsRunning(false);
+              } else if (eventData.currentStep) {
+                // Update event — partial update
+                setRun((prev) => {
+                  const steps = prev?.steps ?? [];
+                  const existing = steps.findIndex((s) => s.id === eventData.currentStep?.id);
+                  const newSteps = existing >= 0
+                    ? steps.map((s, i) => (i === existing ? eventData.currentStep : s))
+                    : [...steps, eventData.currentStep];
+                  return {
+                    ...(prev ?? {} as RunData),
+                    id: prev?.id ?? "stream",
+                    startedAt: prev?.startedAt ?? new Date().toISOString(),
+                    completedAt: null,
+                    status: eventData.status ?? "running",
+                    targetRepo: prev?.targetRepo ?? "",
+                    steps: newSteps,
+                    log: eventData.latestLog ? [...(prev?.log ?? []), eventData.latestLog] : prev?.log ?? [],
+                    budget: eventData.budget ?? prev?.budget ?? {} as Budget,
+                    findings: prev?.findings ?? [],
+                    erc8004Txs: prev?.erc8004Txs ?? [],
+                    findingsCount: eventData.findingsCount,
+                  } as RunData;
+                });
+              }
+            } catch {
+              // Ignore parse errors in stream
+            }
           }
         }
-      } catch {
-        /* ignore */
       }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isRunning]);
-
-  useEffect(() => {
-    return pollStatus();
-  }, [pollStatus]);
+    } catch {
+      setIsRunning(false);
+    }
+  }, []);
 
   const startRun = async () => {
     if (!repoUrl) return;
-    setIsRunning(true);
-    setRun(null);
-    await fetch("/api/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetRepo: repoUrl }),
-    });
+    startRunWithSSE(repoUrl);
   };
 
   const registerAgent = async () => {
