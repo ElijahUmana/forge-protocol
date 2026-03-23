@@ -1,194 +1,214 @@
 {
   "version": "1.0.0",
   "agent": "Forge Protocol",
-  "generatedAt": "2026-03-23T05:47:07.709Z",
-  "runId": "forge-1774244453115",
+  "generatedAt": "2026-03-23T06:27:07.905Z",
+  "runId": "forge-1774247067498",
   "status": "completed",
-  "targetRepo": "https://github.com/juice-shop/juice-shop",
+  "targetRepo": "https://github.com/ElijahUmana/forge-protocol",
   "budget": {
     "maxTokens": 500000,
-    "usedTokens": 184523,
+    "usedTokens": 51780,
     "maxApiCalls": 100,
-    "usedApiCalls": 30,
+    "usedApiCalls": 22,
     "maxDurationMs": 1800000,
     "elapsedMs": 0,
-    "estimatedCostUSD": 1.660707
+    "estimatedCostUSD": 0.46602
   },
   "totalSteps": 6,
-  "totalFindings": 12,
-  "totalLogEntries": 77,
+  "totalFindings": 14,
+  "totalLogEntries": 59,
   "erc8004Txs": [
     {
       "type": "validation_request",
-      "hash": "https://github.com/ElijahUmana/juice-shop/pull/1",
+      "hash": "https://github.com/ElijahUmana/forge-protocol/pull/7",
       "chain": "github",
       "status": "confirmed",
-      "timestamp": "2026-03-23T05:47:07.709Z",
+      "timestamp": "2026-03-23T06:27:07.905Z",
       "details": {
-        "prUrl": "https://github.com/ElijahUmana/juice-shop/pull/1",
-        "findingsCount": 12
+        "prUrl": "https://github.com/ElijahUmana/forge-protocol/pull/7",
+        "findingsCount": 14
       }
     }
   ],
   "findings": [
     {
       "id": "finding-1",
-      "severity": "high",
-      "title": "Vulnerable body-parser dependency",
-      "description": "The application uses body-parser which has known CVE vulnerabilities including denial of service when URL encoding is used. Multiple CVEs affect this dependency with medium to high severity ratings.",
-      "file": "package.json",
-      "line": null,
-      "suggestion": "Update body-parser to the latest secure version. Consider using express.json() and express.urlencoded() built-in middleware instead of body-parser for newer Express applications.",
+      "severity": "critical",
+      "title": "Hardcoded API Key Environment Variable Access Without Validation",
+      "description": "The application accesses process.env.ANTHROPIC_API_KEY directly without validation, and if this environment variable is not set or is empty, it could lead to application crashes or undefined behavior. Additionally, there's no explicit check for the presence of this sensitive credential.",
+      "file": "src/lib/agent-engine.ts",
+      "line": 12,
+      "suggestion": "Add validation to ensure ANTHROPIC_API_KEY exists and is non-empty before creating the Anthropic client. Consider using a configuration validation library or explicit checks with meaningful error messages.",
       "fixApplied": false
     },
     {
       "id": "finding-2",
       "severity": "high",
-      "title": "Vulnerable colors.js dependency",
-      "description": "The colors dependency has critical CVEs causing infinite loops and denial of service attacks. This is a widely exploited vulnerability in the colors.js package.",
+      "title": "Multiple Next.js CVEs with Medium to High Severity",
+      "description": "The application uses Next.js version 16.2.1 which has several known CVEs including HTTP request smuggling, unbounded disk cache growth, and DoS vulnerabilities. These could lead to service disruption or security bypasses.",
       "file": "package.json",
       "line": null,
-      "suggestion": "Remove colors dependency and use native Node.js console styling or switch to safer alternatives like chalk or kleur.",
+      "suggestion": "Update Next.js to the latest patched version that addresses CVE-2024-34351, CVE-2024-34350, and CVE-2024-34349. Monitor security advisories and establish a process for timely dependency updates.",
       "fixApplied": false
     },
     {
       "id": "finding-3",
-      "severity": "medium",
-      "title": "Directory listing enabled",
-      "description": "Multiple directory listing endpoints are enabled which may lead to disclosure of sensitive directories and files. This could expose internal application structure and sensitive files to attackers.",
-      "file": "server.ts",
-      "line": 269,
-      "suggestion": "Disable directory listing unless absolutely necessary for public resources. Use express.static() without serveIndex middleware for sensitive directories.",
+      "severity": "high",
+      "title": "NextAuth.js Critical OAuth Authentication Bypass",
+      "description": "The application uses next-auth version 4.24.13 which has a critical CVE for missing proper state, nonce and PKCE checks for OAuth authentication. This could allow attackers to bypass authentication mechanisms.",
+      "file": "package.json",
+      "line": null,
+      "suggestion": "Immediately update next-auth to version 4.24.16 or later to address the OAuth authentication bypass vulnerability. Review and test all OAuth flows after the upgrade.",
       "fixApplied": false
     },
     {
       "id": "finding-4",
-      "severity": "medium",
-      "title": "Directory listing enabled on additional endpoints",
-      "description": "Directory listing is enabled on multiple paths (lines 273, 277, 281) which increases the attack surface for information disclosure.",
-      "file": "server.ts",
-      "line": 273,
-      "suggestion": "Review and disable directory listing on all non-public directories. Implement proper access controls for file serving.",
+      "severity": "high",
+      "title": "Private Key Environment Variable Without Validation",
+      "description": "The code accesses process.env.AGENT_PRIVATE_KEY without proper validation. If this environment variable is not set, the application will throw an error, but there's no graceful handling or secure fallback mechanism.",
+      "file": "src/lib/erc8004.ts",
+      "line": 12,
+      "suggestion": "Add comprehensive validation for AGENT_PRIVATE_KEY including format validation (proper hex format, correct length), existence check, and consider using a secure key management system instead of environment variables.",
       "fixApplied": false
     },
     {
       "id": "finding-5",
-      "severity": "low",
-      "title": "Console output in production code",
-      "description": "Console.log statements in production code can leak sensitive information and should be removed or replaced with proper logging mechanisms.",
-      "file": "server.ts",
-      "line": 511,
-      "suggestion": "Replace console.log with proper logging using the logger utility already imported in the application. Remove debug console statements from production code.",
+      "severity": "high",
+      "title": "Command Execution with User Input",
+      "description": "The code imports execSync from child_process and uses it in the agent engine, which could potentially execute arbitrary system commands if user input is not properly sanitized.",
+      "file": "src/lib/agent-engine.ts",
+      "line": 11,
+      "suggestion": "Remove execSync import if not needed. If command execution is required, use parameterized commands, validate all inputs, implement allowlisting of permitted commands, and run with minimal privileges.",
       "fixApplied": false
     },
     {
       "id": "finding-6",
-      "severity": "info",
-      "title": "Unsafe format string usage",
-      "description": "String concatenation with non-literal variables in logging functions detected. This could potentially lead to log injection if user input reaches these logging statements.",
-      "file": "server.ts",
-      "line": 155,
-      "suggestion": "Use parameterized logging or validate/sanitize input before including in log messages. Use structured logging with separate fields for user data.",
+      "severity": "medium",
+      "title": "React and React-DOM XSS Vulnerabilities",
+      "description": "The application uses React versions with known Cross-Site Scripting vulnerabilities that could allow attackers to execute malicious scripts in users' browsers.",
+      "file": "package.json",
+      "line": null,
+      "suggestion": "Update React and React-DOM to the latest patched versions. Ensure proper input sanitization and avoid dangerouslySetInnerHTML usage throughout the application.",
       "fixApplied": false
     },
     {
       "id": "finding-7",
       "severity": "medium",
-      "title": "Outdated JWT library",
-      "description": "The application uses jsonwebtoken version 0.4.0 and express-jwt version 0.1.3, which are extremely outdated and likely contain security vulnerabilities.",
-      "file": "package.json",
+      "title": "Missing HTTPS Configuration",
+      "description": "The Next.js configuration file is empty and doesn't specify security headers or HTTPS enforcement, which could lead to insecure data transmission.",
+      "file": "next.config.ts",
       "line": null,
-      "suggestion": "Update jsonwebtoken to the latest version (9.x) and express-jwt to a current version. Review JWT implementation for security best practices.",
+      "suggestion": "Add security headers configuration including HSTS, CSP, X-Frame-Options, and force HTTPS redirects. Configure proper CORS settings and implement security middleware.",
       "fixApplied": false
     },
     {
       "id": "finding-8",
-      "severity": "high",
-      "title": "Potential hardcoded secrets in repository",
-      "description": "The repository contains files like 'ctf.key' and an 'encryptionkeys' directory which may contain hardcoded cryptographic keys or secrets.",
-      "file": "ctf.key",
-      "line": null,
-      "suggestion": "Review all key files and encryption key directories. Move secrets to environment variables or secure key management systems. Never commit secrets to version control.",
+      "severity": "medium",
+      "title": "Hardcoded RPC URL",
+      "description": "The Ethereum RPC URL is hardcoded in the source code, which makes it difficult to change for different environments and could lead to service disruption if the endpoint becomes unavailable.",
+      "file": "src/lib/erc8004.ts",
+      "line": 9,
+      "suggestion": "Move RPC_URL to environment variables and add fallback mechanisms. Consider using multiple RPC endpoints for redundancy and implement proper error handling for network failures.",
       "fixApplied": false
     },
     {
       "id": "finding-9",
-      "severity": "info",
-      "title": "Development and testing artifacts in production",
-      "description": "The application includes extensive testing and development configuration (cypress, vagrant, etc.) which should not be present in production deployments.",
-      "file": "package.json",
+      "severity": "medium",
+      "title": "Missing Error Handling in Blockchain Operations",
+      "description": "The blockchain interaction functions don't have comprehensive error handling for network failures, insufficient gas, or contract execution failures, which could lead to unhandled exceptions.",
+      "file": "src/lib/erc8004.ts",
       "line": null,
-      "suggestion": "Create separate production build processes that exclude development dependencies and testing artifacts. Use .dockerignore and build scripts to exclude dev files.",
+      "suggestion": "Add try-catch blocks around all blockchain operations, implement retry mechanisms for network errors, validate gas estimates, and provide meaningful error messages for different failure scenarios.",
       "fixApplied": false
     },
     {
       "id": "finding-10",
       "severity": "medium",
-      "title": "Weak password and admin authentication logic",
-      "description": "The antiCheat.ts file references 'loginAdminChallenge' and 'weakPasswordChallenge' indicating potential weak authentication mechanisms built into the application.",
-      "file": "lib/antiCheat.ts",
-      "line": 23,
-      "suggestion": "If this is not intentionally vulnerable code for educational purposes, implement strong authentication with proper password policies, account lockout, and multi-factor authentication.",
+      "title": "Unsafe Eval Pattern in SAST Rules",
+      "description": "The SAST configuration includes detection for eval() usage but the pattern itself appears in the codebase as part of the security scanning rules, which could trigger false positives.",
+      "file": "src/lib/sast.ts",
+      "line": 54,
+      "suggestion": "Consider restructuring the SAST rules to avoid including actual unsafe patterns in the source code. Use string construction or external configuration files for pattern definitions.",
       "fixApplied": false
     },
     {
       "id": "finding-11",
       "severity": "low",
-      "title": "Insecure chatbot coupon generation",
-      "description": "The chatbot automatically generates coupon codes when requested, which could be abused for unauthorized discounts without proper rate limiting or authentication.",
-      "file": "lib/botUtils.ts",
-      "line": 23,
-      "suggestion": "Implement proper authentication and rate limiting for coupon generation. Add validation to ensure only authorized users can request coupons.",
+      "title": "Console.log Statement in Production Code",
+      "description": "There are console.log statements in the codebase that could leak sensitive information in production environments or create unnecessary output.",
+      "file": "src/lib/agent-engine.ts",
+      "line": 457,
+      "suggestion": "Remove console.log statements from production code or replace with proper logging framework that can be configured for different environments. Consider using a logger that supports different log levels.",
       "fixApplied": false
     },
     {
       "id": "finding-12",
-      "severity": "info",
-      "title": "TypeScript strict mode configuration",
-      "description": "While TypeScript strict mode is enabled, the application allows JavaScript files and has several @ts-expect-error suppressions indicating potential type safety issues.",
-      "file": "tsconfig.json",
+      "severity": "low",
+      "title": "Missing Rate Limiting Configuration",
+      "description": "The application doesn't implement rate limiting for API calls or agent operations, which could lead to resource exhaustion or abuse.",
+      "file": "",
       "line": null,
-      "suggestion": "Review and resolve TypeScript errors rather than suppressing them. Consider removing allowJs if not necessary and ensure all code follows TypeScript best practices.",
+      "suggestion": "Implement rate limiting middleware for API routes, add request throttling for agent operations, and configure appropriate limits based on user tiers or authentication status.",
+      "fixApplied": false
+    },
+    {
+      "id": "finding-13",
+      "severity": "info",
+      "title": "TypeScript Strict Mode Enabled",
+      "description": "The TypeScript configuration has strict mode enabled, which is a security best practice that helps catch potential runtime errors at compile time.",
+      "file": "tsconfig.json",
+      "line": 8,
+      "suggestion": "Continue maintaining strict TypeScript configuration and consider enabling additional strict flags like noImplicitReturns and noImplicitThis for even better type safety.",
+      "fixApplied": false
+    },
+    {
+      "id": "finding-14",
+      "severity": "info",
+      "title": "ESLint Configuration Present",
+      "description": "The project includes ESLint configuration which helps maintain code quality and can catch potential security issues during development.",
+      "file": "package.json",
+      "line": null,
+      "suggestion": "Ensure ESLint includes security-focused rules such as eslint-plugin-security and configure pre-commit hooks to enforce linting before code commits.",
       "fixApplied": false
     }
   ],
   "entries": [
     {
-      "timestamp": "2026-03-23T05:40:53.116Z",
+      "timestamp": "2026-03-23T06:24:27.498Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Starting autonomous analysis pipeline",
       "details": {
-        "targetRepo": "https://github.com/juice-shop/juice-shop",
-        "owner": "juice-shop",
-        "repo": "juice-shop"
+        "targetRepo": "https://github.com/ElijahUmana/forge-protocol",
+        "owner": "ElijahUmana",
+        "repo": "forge-protocol"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:40:53.116Z",
+      "timestamp": "2026-03-23T06:24:27.498Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Agent orchestrator starting",
       "details": {
-        "inputLength": 594
+        "inputLength": 604
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:40:59.537Z",
+      "timestamp": "2026-03-23T06:24:32.669Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 590,
+        "tokensUsed": 562,
         "contentBlocks": 1
       },
-      "tokensUsed": 590
+      "tokensUsed": 562
     },
     {
-      "timestamp": "2026-03-23T05:40:59.537Z",
+      "timestamp": "2026-03-23T06:24:32.669Z",
       "agent": "orchestrator",
       "type": "delegation",
       "action": "Sent task assignment to Scanner via message bus",
@@ -198,7 +218,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:40:59.537Z",
+      "timestamp": "2026-03-23T06:24:32.669Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Dynamic plan parsed \u2014 driving pipeline",
@@ -209,481 +229,249 @@
           "shouldGenerateFixes": true,
           "shouldReviewFixes": true,
           "priorityFiles": [
-            "server.ts",
-            "app.ts",
-            "routes/*.ts",
-            "lib/*.ts",
-            "models/*.ts",
+            "*.sol",
             "package.json",
-            "package-lock.json",
-            "frontend/src/**/*.ts",
-            "frontend/src/**/*.js",
-            "data/*.js",
-            "config/*.yml"
+            "yarn.lock",
+            "hardhat.config.js",
+            "contracts/**/*.sol",
+            "test/**/*.js",
+            "scripts/**/*.js"
           ],
           "focusAreas": [
-            "SQL injection vulnerabilities",
-            "XSS prevention",
-            "Authentication bypass",
-            "Authorization flaws",
-            "Input validation",
-            "Dependency vulnerabilities",
-            "Secrets management",
-            "CSRF protection",
-            "File upload security",
-            "API security"
+            "smart_contract_vulnerabilities",
+            "access_control",
+            "reentrancy_attacks",
+            "integer_overflow_underflow",
+            "dependency_vulnerabilities",
+            "private_key_exposure",
+            "gas_optimization",
+            "solidity_best_practices"
           ],
-          "reasoning": "OWASP Juice Shop is an intentionally vulnerable web application used for security training. Analysis should focus on identifying real security issues in the codebase infrastructure while understanding this is designed to demonstrate vulnerabilities. Priority on server-side code, authentication mechanisms, data models, and dependency security."
+          "reasoning": "This appears to be a blockchain/DeFi protocol repository. Priority focus on Solidity smart contracts for critical vulnerabilities like reentrancy, access control, and arithmetic issues. Dependencies scanning essential for known CVEs. Code quality analysis for gas optimization and best practices."
         }
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:40:59.537Z",
+      "timestamp": "2026-03-23T06:24:32.669Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Beginning repository scan",
       "details": {
-        "owner": "juice-shop",
-        "repo": "juice-shop"
+        "owner": "ElijahUmana",
+        "repo": "forge-protocol"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:40:59.850Z",
+      "timestamp": "2026-03-23T06:24:33.152Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "npm_audit_simulation",
       "details": {
-        "totalDeps": 138,
+        "totalDeps": 15,
         "depNames": [
-          "@fontsource/roboto",
-          "body-parser",
-          "check-dependencies",
-          "check-internet-connected",
-          "clarinet",
-          "colors",
-          "compression",
-          "config",
-          "cookie-parser",
-          "cookieconsent",
-          "cors",
-          "download",
-          "errorhandler",
-          "ethers",
-          "express",
-          "express-ipfilter",
-          "express-jwt",
-          "express-rate-limit",
-          "express-robots-txt",
-          "express-security.txt",
-          "feature-policy",
-          "file-stream-rotator",
-          "file-type",
-          "finale-rest",
-          "fs-extra",
-          "fuzzball",
-          "glob",
-          "graceful-fs",
-          "grunt",
-          "grunt-contrib-compress",
-          "grunt-replace-json",
-          "hashids",
-          "hbs",
-          "helmet",
-          "html-entities",
-          "i18n",
-          "js-yaml",
-          "jsonwebtoken",
-          "jssha",
-          "juicy-chat-bot",
-          "libxmljs2",
-          "marsdb",
-          "material-design-lite",
-          "material-icons",
-          "median",
-          "morgan",
-          "multer",
-          "node-pre-gyp",
-          "notevil",
-          "on-finished",
-          "otplib",
-          "pdfkit",
-          "portscanner",
-          "prom-client",
-          "pug",
-          "replace",
-          "sanitize-filename",
-          "sanitize-html",
-          "semver",
-          "sequelize",
-          "serve-index",
-          "socket.io",
-          "sqlite3",
-          "svg-captcha",
-          "swagger-ui-express",
-          "ts-node-dev",
-          "unzipper",
-          "web3",
-          "winston",
-          "yaml-schema-validator",
-          "z85",
-          "@cyclonedx/cyclonedx-npm",
-          "@istanbuljs/nyc-config-typescript",
-          "@types/chai",
-          "@types/clarinet",
-          "@types/compression",
-          "@types/config",
-          "@types/cookie-parser",
-          "@types/cors",
-          "@types/cross-spawn",
-          "@types/cypress",
-          "@types/diff",
-          "@types/download",
-          "@types/errorhandler",
-          "@types/exif",
-          "@types/express",
-          "@types/express-jwt",
-          "@types/frisby",
-          "@types/fs-extra",
-          "@types/glob",
-          "@types/graceful-fs",
-          "@types/i18n",
-          "@types/jest",
-          "@types/js-yaml",
-          "@types/jsonwebtoken",
-          "@types/jws",
-          "@types/lodash",
-          "@types/mocha",
-          "@types/morgan",
-          "@types/multer",
+          "@anthropic-ai/sdk",
+          "eventsource-parser",
+          "next",
+          "next-auth",
+          "react",
+          "react-dom",
+          "viem",
+          "@tailwindcss/postcss",
           "@types/node",
-          "@types/on-finished",
-          "@types/pdfkit",
-          "@types/portscanner",
-          "@types/pug",
-          "@types/sanitize-html",
-          "@types/semver",
-          "@types/sequelize",
-          "@types/serve-index",
-          "@types/sinon",
-          "@types/sinon-chai",
-          "@types/socket.io",
-          "@types/socket.io-client",
-          "@types/swagger-ui-express",
-          "@types/unzipper",
-          "@typescript-eslint/eslint-plugin",
-          "@typescript-eslint/parser",
-          "chai",
-          "concurrently",
-          "cypress",
+          "@types/react",
+          "@types/react-dom",
           "eslint",
-          "eslint-config-standard-with-typescript",
-          "eslint-plugin-import",
-          "eslint-plugin-node",
-          "eslint-plugin-promise",
-          "exif",
-          "frisby",
-          "grunt-cli",
-          "jest",
-          "mocha",
-          "nyc",
-          "sinon",
-          "sinon-chai",
-          "socket.io-client",
-          "source-map-support",
-          "ts-jest",
-          "ts-node",
+          "eslint-config-next",
+          "tailwindcss",
           "typescript"
         ]
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:01.805Z",
+      "timestamp": "2026-03-23T06:24:35.655Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "github_advisory_database",
       "details": {
-        "vulnerabilitiesFound": 4
+        "vulnerabilitiesFound": 9
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:01.992Z",
+      "timestamp": "2026-03-23T06:24:35.879Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_repo_contents",
       "details": {
         "path": "/",
-        "fileCount": 57
+        "fileCount": 14
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:04.433Z",
+      "timestamp": "2026-03-23T06:24:38.091Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
-        "path": "app.ts",
-        "size": 388
+        "path": "next.config.ts",
+        "size": 133
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:04.656Z",
-      "agent": "scanner",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "path": "cypress.config.ts",
-        "size": 2952
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:41:04.851Z",
+      "timestamp": "2026-03-23T06:24:38.280Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "path": "package.json",
-        "size": 5016
+        "size": 660
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:05.094Z",
-      "agent": "scanner",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "path": "server.ts",
-        "size": 5016
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:41:05.431Z",
+      "timestamp": "2026-03-23T06:24:38.463Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "path": "tsconfig.json",
-        "size": 769
+        "size": 670
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:05.644Z",
+      "timestamp": "2026-03-23T06:24:38.707Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
-        "path": "lib/accuracy.ts",
-        "size": 2317
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:41:05.919Z",
-      "agent": "scanner",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "path": "lib/antiCheat.ts",
+        "path": "src/lib/agent-engine.ts",
         "size": 5016
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:06.181Z",
+      "timestamp": "2026-03-23T06:24:38.941Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
-        "path": "lib/botUtils.ts",
-        "size": 1300
+        "path": "src/lib/erc8004.ts",
+        "size": 5016
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:06.182Z",
+      "timestamp": "2026-03-23T06:24:39.137Z",
+      "agent": "scanner",
+      "type": "tool_call",
+      "action": "fetch_file_content",
+      "details": {
+        "path": "src/lib/logger.ts",
+        "size": 1934
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T06:24:39.364Z",
+      "agent": "scanner",
+      "type": "tool_call",
+      "action": "fetch_file_content",
+      "details": {
+        "path": "src/lib/sast.ts",
+        "size": 4581
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T06:24:39.564Z",
+      "agent": "scanner",
+      "type": "tool_call",
+      "action": "fetch_file_content",
+      "details": {
+        "path": "src/lib/types.ts",
+        "size": 3552
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T06:24:39.567Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "sast_pattern_scanner",
       "details": {
         "filesScanned": 8,
-        "findingsCount": 1,
+        "findingsCount": 3,
         "rules": [
-          "SAST-009"
+          "SAST-009",
+          "SAST-011",
+          "SAST-004"
         ]
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:10.022Z",
+      "timestamp": "2026-03-23T06:24:43.671Z",
       "agent": "scanner",
       "type": "tool_call",
       "action": "semgrep_sast",
       "details": {
-        "findings": 5,
-        "rules": [
-          "javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring",
-          "javascript.express.security.audit.express-check-directory-listing.express-check-directory-listing",
-          "javascript.express.security.audit.express-check-directory-listing.express-check-directory-listing",
-          "javascript.express.security.audit.express-check-directory-listing.express-check-directory-listing",
-          "javascript.express.security.audit.express-check-directory-listing.express-check-directory-listing"
-        ]
+        "findings": 0,
+        "rules": []
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:10.023Z",
+      "timestamp": "2026-03-23T06:24:43.672Z",
       "agent": "scanner",
       "type": "decision",
-      "action": "Analyzing 110 files for vulnerabilities",
+      "action": "Analyzing 11 files for vulnerabilities",
       "details": {
         "files": [
-          "app.ts",
-          "cypress.config.ts",
+          "next.config.ts",
           "package.json",
-          "server.ts",
           "tsconfig.json",
-          "lib/accuracy.ts",
-          "lib/antiCheat.ts",
-          "lib/botUtils.ts",
-          "lib/challengeUtils.ts",
-          "lib/codingChallenges.ts",
-          "lib/config.types.ts",
-          "lib/insecurity.ts",
-          "lib/is-docker.ts",
-          "lib/is-heroku.ts",
-          "lib/is-windows.ts",
-          "lib/logger.ts",
-          "lib/noUpdate.ts",
-          "lib/utils.ts",
-          "lib/webhook.ts",
-          "routes/2fa.ts",
-          "routes/address.ts",
-          "routes/angular.ts",
-          "routes/appConfiguration.ts",
-          "routes/appVersion.ts",
-          "routes/authenticatedUsers.ts",
-          "routes/b2bOrder.ts",
-          "routes/basket.ts",
-          "routes/basketItems.ts",
-          "routes/captcha.ts",
-          "routes/changePassword.ts",
-          "routes/chatbot.ts",
-          "routes/checkKeys.ts",
-          "routes/continueCode.ts",
-          "routes/countryMapping.ts",
-          "routes/coupon.ts",
-          "routes/createProductReviews.ts",
-          "routes/currentUser.ts",
-          "routes/dataErasure.ts",
-          "routes/dataExport.ts",
-          "routes/delivery.ts",
-          "routes/deluxe.ts",
-          "routes/easterEgg.ts",
-          "routes/fileServer.ts",
-          "routes/fileUpload.ts",
-          "routes/imageCaptcha.ts",
-          "routes/keyServer.ts",
-          "routes/languages.ts",
-          "routes/likeProductReviews.ts",
-          "routes/logfileServer.ts",
-          "routes/login.ts",
-          "routes/memory.ts",
-          "routes/metrics.ts",
-          "routes/nftMint.ts",
-          "routes/order.ts",
-          "routes/orderHistory.ts",
-          "routes/payment.ts",
-          "routes/premiumReward.ts",
-          "routes/privacyPolicyProof.ts",
-          "routes/profileImageFileUpload.ts",
-          "routes/profileImageUrlUpload.ts",
-          "routes/quarantineServer.ts",
-          "routes/recycles.ts",
-          "routes/redirect.ts",
-          "routes/repeatNotification.ts",
-          "routes/resetPassword.ts",
-          "routes/restoreProgress.ts",
-          "routes/saveLoginIp.ts",
-          "routes/search.ts",
-          "routes/securityQuestion.ts",
-          "routes/showProductReviews.ts",
-          "routes/trackOrder.ts",
-          "routes/updateProductReviews.ts",
-          "routes/updateUserProfile.ts",
-          "routes/userProfile.ts",
-          "routes/verify.ts",
-          "routes/videoHandler.ts",
-          "routes/vulnCodeFixes.ts",
-          "routes/vulnCodeSnippet.ts",
-          "routes/wallet.ts",
-          "routes/web3Wallet.ts",
-          "data/datacache.ts",
-          "data/datacreator.ts",
-          "data/mongodb.ts",
-          "data/staticData.ts",
-          "data/types.ts",
-          "models/address.ts",
-          "models/basket.ts",
-          "models/basketitem.ts",
-          "models/captcha.ts",
-          "models/card.ts",
-          "models/challenge.ts",
-          "models/complaint.ts",
-          "models/delivery.ts",
-          "models/feedback.ts",
-          "models/hint.ts",
-          "models/imageCaptcha.ts",
-          "models/index.ts",
-          "models/memory.ts",
-          "models/privacyRequests.ts",
-          "models/product.ts",
-          "models/quantity.ts",
-          "models/recycle.ts",
-          "models/relations.ts",
-          "models/securityAnswer.ts",
-          "models/securityQuestion.ts",
-          "models/user.ts",
-          "models/wallet.ts",
-          "frontend/src/karma.conf.js",
-          "frontend/src/main.ts",
-          "frontend/src/test.ts"
+          "src/lib/agent-engine.ts",
+          "src/lib/erc8004.ts",
+          "src/lib/logger.ts",
+          "src/lib/sast.ts",
+          "src/lib/types.ts",
+          "src/lib/x402.ts",
+          "src/app/layout.tsx",
+          "src/app/page.tsx"
         ]
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:10.023Z",
+      "timestamp": "2026-03-23T06:24:43.672Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Agent scanner starting",
       "details": {
-        "inputLength": 28340
+        "inputLength": 24853
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:36.911Z",
+      "timestamp": "2026-03-23T06:25:16.046Z",
       "agent": "scanner",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 11197,
+        "tokensUsed": 10276,
         "contentBlocks": 1
       },
-      "tokensUsed": 11197
+      "tokensUsed": 10276
     },
     {
-      "timestamp": "2026-03-23T05:41:36.911Z",
+      "timestamp": "2026-03-23T06:25:16.046Z",
       "agent": "scanner",
       "type": "delegation",
       "action": "Sent scan results to Orchestrator via message bus",
@@ -694,7 +482,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:37.400Z",
+      "timestamp": "2026-03-23T06:25:16.293Z",
       "agent": "orchestrator",
       "type": "reputation",
       "action": "Trust gate check for Agent #2221",
@@ -709,7 +497,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:37.400Z",
+      "timestamp": "2026-03-23T06:25:16.293Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Analyzing 3 critical findings",
@@ -723,227 +511,155 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:37.400Z",
+      "timestamp": "2026-03-23T06:25:16.293Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Agent analyzer starting",
       "details": {
-        "inputLength": 1913
+        "inputLength": 2286
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:40.546Z",
+      "timestamp": "2026-03-23T06:25:19.258Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 1366,
+        "tokensUsed": 1509,
         "contentBlocks": 3
       },
-      "tokensUsed": 1366
+      "tokensUsed": 1509
     },
     {
-      "timestamp": "2026-03-23T05:41:40.803Z",
+      "timestamp": "2026-03-23T06:25:19.595Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "path": "src/lib/agent-engine.ts"
+        },
+        "outputLength": 10029,
+        "durationMs": 337,
+        "safe": true,
+        "guardrailCheck": "File truncated from 47119 to 10000 chars for safety"
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T06:25:19.787Z",
+      "agent": "analyzer",
+      "type": "tool_call",
+      "action": "fetch_file_content",
+      "details": {
+        "input": {
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
           "path": "package.json"
         },
-        "outputLength": 8461,
-        "durationMs": 256,
+        "outputLength": 660,
+        "durationMs": 192,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:41.018Z",
-      "agent": "analyzer",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "path": "server.ts"
-        },
-        "outputLength": 10029,
-        "durationMs": 215,
-        "safe": true,
-        "guardrailCheck": "File truncated from 36948 to 10000 chars for safety"
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:41:44.450Z",
+      "timestamp": "2026-03-23T06:25:22.782Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 2)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 8243,
-        "contentBlocks": 2
+        "tokensUsed": 4858,
+        "contentBlocks": 3
       },
-      "tokensUsed": 8243
+      "tokensUsed": 4858
     },
     {
-      "timestamp": "2026-03-23T05:41:44.846Z",
+      "timestamp": "2026-03-23T06:25:23.183Z",
       "agent": "analyzer",
       "type": "tool_call",
       "action": "search_code",
       "details": {
         "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "serveIndex"
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "query": "ANTHROPIC_API_KEY"
         },
-        "outputLength": 2425,
-        "durationMs": 395,
+        "outputLength": 526,
+        "durationMs": 401,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:47.613Z",
+      "timestamp": "2026-03-23T06:25:23.509Z",
+      "agent": "analyzer",
+      "type": "tool_call",
+      "action": "search_code",
+      "details": {
+        "input": {
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "query": "next-auth"
+        },
+        "outputLength": 334,
+        "durationMs": 326,
+        "safe": true,
+        "guardrailCheck": null
+      },
+      "tokensUsed": 0
+    },
+    {
+      "timestamp": "2026-03-23T06:25:25.972Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 3)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 9337,
+        "tokensUsed": 5385,
         "contentBlocks": 2
       },
-      "tokensUsed": 9337
+      "tokensUsed": 5385
     },
     {
-      "timestamp": "2026-03-23T05:41:48.019Z",
+      "timestamp": "2026-03-23T06:25:26.183Z",
       "agent": "analyzer",
       "type": "tool_call",
-      "action": "search_code",
+      "action": "fetch_file_content",
       "details": {
         "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "app.use('/ftp', serveIndex"
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "path": "src/app/api/summarize/route.ts"
         },
-        "outputLength": 1718,
-        "durationMs": 406,
+        "outputLength": 1482,
+        "durationMs": 211,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:41:51.019Z",
+      "timestamp": "2026-03-23T06:25:54.558Z",
       "agent": "analyzer",
       "type": "decision",
       "action": "Claude response (iteration 4)",
       "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 10160,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 10160
-    },
-    {
-      "timestamp": "2026-03-23T05:41:52.779Z",
-      "agent": "analyzer",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "path": "data/static/codefixes/directoryListingChallenge_1_correct.ts"
-        },
-        "outputLength": 789,
-        "durationMs": 1760,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:41:55.241Z",
-      "agent": "analyzer",
-      "type": "decision",
-      "action": "Claude response (iteration 5)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 10550,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 10550
-    },
-    {
-      "timestamp": "2026-03-23T05:41:55.670Z",
-      "agent": "analyzer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "colors.green colors.red"
-        },
-        "outputLength": 1769,
-        "durationMs": 429,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:42:02.269Z",
-      "agent": "analyzer",
-      "type": "decision",
-      "action": "Claude response (iteration 6)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 11395,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 11395
-    },
-    {
-      "timestamp": "2026-03-23T05:42:02.651Z",
-      "agent": "analyzer",
-      "type": "tool_call",
-      "action": "fetch_file_content",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "path": "lib/startup/validatePreconditions.ts"
-        },
-        "outputLength": 6004,
-        "durationMs": 382,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:42:45.305Z",
-      "agent": "analyzer",
-      "type": "decision",
-      "action": "Claude response (iteration 7)",
-      "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 14205,
+        "tokensUsed": 7075,
         "contentBlocks": 1
       },
-      "tokensUsed": 14205
+      "tokensUsed": 7075
     },
     {
-      "timestamp": "2026-03-23T05:42:45.305Z",
+      "timestamp": "2026-03-23T06:25:54.558Z",
       "agent": "analyzer",
       "type": "delegation",
       "action": "Sent deep analysis results to Orchestrator via message bus",
@@ -953,309 +669,119 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:42:45.305Z",
+      "timestamp": "2026-03-23T06:25:54.558Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Agent fixer starting",
       "details": {
-        "inputLength": 1897
+        "inputLength": 2270
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:42:51.075Z",
+      "timestamp": "2026-03-23T06:25:57.019Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 1288,
+        "tokensUsed": 1410,
         "contentBlocks": 2
       },
-      "tokensUsed": 1288
+      "tokensUsed": 1410
     },
     {
-      "timestamp": "2026-03-23T05:42:51.352Z",
+      "timestamp": "2026-03-23T06:25:57.335Z",
       "agent": "fixer",
       "type": "tool_call",
-      "action": "fetch_file_content",
+      "action": "fetch_repo_contents",
       "details": {
         "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "path": "package.json"
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "path": ""
         },
-        "outputLength": 8461,
-        "durationMs": 277,
+        "outputLength": 982,
+        "durationMs": 316,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:42:53.245Z",
+      "timestamp": "2026-03-23T06:25:59.111Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 2)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 5080,
+        "tokensUsed": 1854,
         "contentBlocks": 1
       },
-      "tokensUsed": 5080
+      "tokensUsed": 1854
     },
     {
-      "timestamp": "2026-03-23T05:42:53.490Z",
+      "timestamp": "2026-03-23T06:25:59.343Z",
       "agent": "fixer",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "path": "server.ts"
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "path": "src/lib/agent-engine.ts"
         },
         "outputLength": 10029,
-        "durationMs": 245,
+        "durationMs": 232,
         "safe": true,
-        "guardrailCheck": "File truncated from 36948 to 10000 chars for safety"
+        "guardrailCheck": "File truncated from 47119 to 10000 chars for safety"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:43:03.317Z",
+      "timestamp": "2026-03-23T06:26:01.106Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 3)",
       "details": {
         "stopReason": "tool_use",
-        "tokensUsed": 8202,
-        "contentBlocks": 2
+        "tokensUsed": 4753,
+        "contentBlocks": 1
       },
-      "tokensUsed": 8202
+      "tokensUsed": 4753
     },
     {
-      "timestamp": "2026-03-23T05:43:03.704Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "serveIndex"
-        },
-        "outputLength": 2425,
-        "durationMs": 387,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:43:19.885Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 4)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 9287,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 9287
-    },
-    {
-      "timestamp": "2026-03-23T05:43:20.459Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "express.static"
-        },
-        "outputLength": 2246,
-        "durationMs": 574,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:43:39.607Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 5)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 10315,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 10315
-    },
-    {
-      "timestamp": "2026-03-23T05:43:39.921Z",
+      "timestamp": "2026-03-23T06:26:01.351Z",
       "agent": "fixer",
       "type": "tool_call",
       "action": "fetch_file_content",
       "details": {
         "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "path": "data/static/codefixes/directoryListingChallenge_1_correct.ts"
+          "owner": "ElijahUmana",
+          "repo": "forge-protocol",
+          "path": "package.json"
         },
-        "outputLength": 789,
-        "durationMs": 314,
+        "outputLength": 660,
+        "durationMs": 245,
         "safe": true,
         "guardrailCheck": null
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:43:58.461Z",
+      "timestamp": "2026-03-23T06:26:24.179Z",
       "agent": "fixer",
       "type": "decision",
-      "action": "Claude response (iteration 6)",
+      "action": "Claude response (iteration 4)",
       "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 10708,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 10708
-    },
-    {
-      "timestamp": "2026-03-23T05:43:59.205Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "serveIndexMiddleware"
-        },
-        "outputLength": 2425,
-        "durationMs": 744,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:44:19.989Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 7)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 11792,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 11792
-    },
-    {
-      "timestamp": "2026-03-23T05:44:20.497Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "serveIndexMiddleware"
-        },
-        "outputLength": 2425,
-        "durationMs": 508,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:44:42.920Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 8)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 12873,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 12873
-    },
-    {
-      "timestamp": "2026-03-23T05:44:43.326Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "const serveIndexMiddleware"
-        },
-        "outputLength": 146,
-        "durationMs": 406,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:45:10.052Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 9)",
-      "details": {
-        "stopReason": "tool_use",
-        "tokensUsed": 13061,
-        "contentBlocks": 2
-      },
-      "tokensUsed": 13061
-    },
-    {
-      "timestamp": "2026-03-23T05:45:10.605Z",
-      "agent": "fixer",
-      "type": "tool_call",
-      "action": "search_code",
-      "details": {
-        "input": {
-          "owner": "juice-shop",
-          "repo": "juice-shop",
-          "query": "well-known"
-        },
-        "outputLength": 1930,
-        "durationMs": 553,
-        "safe": true,
-        "guardrailCheck": null
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:46:36.112Z",
-      "agent": "fixer",
-      "type": "decision",
-      "action": "Claude response (iteration 10)",
-      "details": {
-        "stopReason": "max_tokens",
-        "tokensUsed": 17992,
+        "stopReason": "end_turn",
+        "tokensUsed": 7278,
         "contentBlocks": 1
       },
-      "tokensUsed": 17992
+      "tokensUsed": 7278
     },
     {
-      "timestamp": "2026-03-23T05:46:36.112Z",
-      "agent": "fixer",
-      "type": "guardrail",
-      "action": "Max iterations reached \u2014 stopping agent",
-      "details": {
-        "maxIterations": 10
-      },
-      "tokensUsed": 0
-    },
-    {
-      "timestamp": "2026-03-23T05:46:36.112Z",
+      "timestamp": "2026-03-23T06:26:24.179Z",
       "agent": "fixer",
       "type": "delegation",
       "action": "Sent proposed fixes to Reviewer for verification via message bus",
@@ -1265,7 +791,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:36.113Z",
+      "timestamp": "2026-03-23T06:26:24.179Z",
       "agent": "reviewer",
       "type": "decision",
       "action": "Reviewing proposed fixes",
@@ -1273,29 +799,29 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:36.113Z",
+      "timestamp": "2026-03-23T06:26:24.180Z",
       "agent": "reviewer",
       "type": "decision",
       "action": "Agent reviewer starting",
       "details": {
-        "inputLength": 12228
+        "inputLength": 7941
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:52.248Z",
+      "timestamp": "2026-03-23T06:26:32.763Z",
       "agent": "reviewer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 5382,
+        "tokensUsed": 3384,
         "contentBlocks": 1
       },
-      "tokensUsed": 5382
+      "tokensUsed": 3384
     },
     {
-      "timestamp": "2026-03-23T05:46:52.248Z",
+      "timestamp": "2026-03-23T06:26:32.763Z",
       "agent": "reviewer",
       "type": "delegation",
       "action": "Sent REJECTION verdict to Orchestrator via message bus",
@@ -1305,7 +831,7 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:52.248Z",
+      "timestamp": "2026-03-23T06:26:32.763Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Reviewer rejected fixes \u2014 triggering self-correction loop",
@@ -1313,29 +839,29 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:52.248Z",
+      "timestamp": "2026-03-23T06:26:32.763Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Agent fixer starting",
       "details": {
-        "inputLength": 5057
+        "inputLength": 4070
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:57.655Z",
+      "timestamp": "2026-03-23T06:27:00.687Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Claude response (iteration 1)",
       "details": {
         "stopReason": "end_turn",
-        "tokensUsed": 1500,
+        "tokensUsed": 3436,
         "contentBlocks": 1
       },
-      "tokensUsed": 1500
+      "tokensUsed": 3436
     },
     {
-      "timestamp": "2026-03-23T05:46:57.655Z",
+      "timestamp": "2026-03-23T06:27:00.687Z",
       "agent": "fixer",
       "type": "decision",
       "action": "Self-correction complete \u2014 revised fixes generated",
@@ -1343,22 +869,22 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:57.655Z",
+      "timestamp": "2026-03-23T06:27:00.687Z",
       "agent": "orchestrator",
       "type": "reputation",
       "action": "Computed dynamic reputation score",
       "details": {
-        "dynamicScore": 95,
+        "dynamicScore": 99,
         "breakdown": {
           "completionBonus": 20,
-          "findingsBonus": 12,
-          "severityBonus": 3,
+          "findingsBonus": 14,
+          "severityBonus": 5,
           "base": 60
         },
         "auditStats": {
-          "totalFindings": 12,
-          "criticalCount": 0,
-          "highCount": 3,
+          "totalFindings": 14,
+          "criticalCount": 1,
+          "highCount": 4,
           "stepsCompleted": 6,
           "totalSteps": 6
         }
@@ -1366,53 +892,53 @@
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:57.655Z",
+      "timestamp": "2026-03-23T06:27:00.687Z",
       "agent": "orchestrator",
       "type": "identity",
       "action": "Submitting dynamic reputation to ERC-8004",
       "details": {
         "agentId": 2221,
-        "dynamicScore": 95,
+        "dynamicScore": 99,
         "agentAddress": "0xad114d421E106a845b196BdBe527A9dc4b7e8EF5"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:58.278Z",
+      "timestamp": "2026-03-23T06:27:01.639Z",
       "agent": "orchestrator",
       "type": "error",
       "action": "ERC-8004 reputation update failed (likely no gas)",
       "details": {
-        "error": "ContractFunctionExecutionError: The contract function \"giveFeedback\" reverted with the following reason:\nSelf-feedback not allowed\n\nContract Call:\n  address:   0x8004B663056A597Dffe9eCcC1965A193B7388713\n  function:  giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)\n  args:                  (2221, 95, 0, audit_quality, forge_protocol, , https://github.com/juice-shop/juice-shop, 0x0000000000000000000000000000000000000000000000000000000000000000)\n  sender:    0xad114d421E106a845b196BdBe527A9dc4b7e8EF5\n\nDocs: https://viem.sh/docs/contract/writeContract\nDetails: execution reverted: Self-feedback not allowed\nVersion: viem@2.47.6"
+        "error": "ContractFunctionExecutionError: The contract function \"giveFeedback\" reverted with the following reason:\nSelf-feedback not allowed\n\nContract Call:\n  address:   0x8004B663056A597Dffe9eCcC1965A193B7388713\n  function:  giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)\n  args:                  (2221, 99, 0, audit_quality, forge_protocol, , https://github.com/ElijahUmana/forge-protocol, 0x0000000000000000000000000000000000000000000000000000000000000000)\n  sender:    0xad114d421E106a845b196BdBe527A9dc4b7e8EF5\n\nDocs: https://viem.sh/docs/contract/writeContract\nDetails: execution reverted: Self-feedback not allowed\nVersion: viem@2.47.6"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:46:58.278Z",
+      "timestamp": "2026-03-23T06:27:01.639Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Creating GitHub PR with security audit report",
       "details": {
-        "owner": "juice-shop",
-        "repo": "juice-shop",
-        "findingsCount": 12
+        "owner": "ElijahUmana",
+        "repo": "forge-protocol",
+        "findingsCount": 14
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:47:07.709Z",
+      "timestamp": "2026-03-23T06:27:07.905Z",
       "agent": "orchestrator",
       "type": "tool_call",
       "action": "github_create_pr",
       "details": {
-        "prUrl": "https://github.com/ElijahUmana/juice-shop/pull/1",
-        "prNumber": 1,
-        "branch": "forge-protocol/security-audit-1774244822194"
+        "prUrl": "https://github.com/ElijahUmana/forge-protocol/pull/7",
+        "prNumber": 7,
+        "branch": "forge-protocol/security-audit-1774247225692"
       },
       "tokensUsed": 0
     },
     {
-      "timestamp": "2026-03-23T05:47:07.709Z",
+      "timestamp": "2026-03-23T06:27:07.905Z",
       "agent": "orchestrator",
       "type": "decision",
       "action": "Inter-agent communication summary",
