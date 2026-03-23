@@ -339,7 +339,78 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="flex-1 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          {!run && !isRunning ? (
+          {activeTab === "history" ? (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Audit History</h3>
+                <span className="text-[10px] text-zinc-600">{runHistory.length} runs</span>
+              </div>
+              {runHistory.length === 0 ? (
+                <div className="text-center py-12 text-zinc-600 text-sm">No audit history yet. Run an analysis to see results here.</div>
+              ) : (
+                runHistory.map((h, i) => (
+                  <div key={i} className={`p-4 rounded-xl border transition-all ${h.prUrl ? "bg-blue-500/5 border-blue-500/20 hover:border-blue-500/30" : "bg-zinc-900/50 border-zinc-800/50 hover:border-zinc-700/50"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-zinc-300 truncate flex-1">{h.repo.replace("https://github.com/", "")}</span>
+                      <span className="text-[10px] text-zinc-600 shrink-0 ml-3">{new Date(h.date).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs mb-2">
+                      <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">{h.findings} findings</span>
+                      {h.critical > 0 && <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-400">{h.critical} critical</span>}
+                    </div>
+                    {h.prUrl ? (
+                      <a href={h.prUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-xs">
+                        <span>View Security Audit PR</span>
+                        <span className="ml-auto">&#8599;</span>
+                      </a>
+                    ) : (
+                      <div className="text-[10px] text-zinc-600">No PR created for this audit</div>
+                    )}
+                  </div>
+                ))
+              )}
+              {runHistory.length > 0 && (
+                <button onClick={() => { setRunHistory([]); localStorage.removeItem("forge-history"); }}
+                  className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+                  Clear history
+                </button>
+              )}
+            </div>
+          ) : activeTab === "identity" ? (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="p-6 rounded-xl bg-gradient-to-br from-violet-500/5 to-blue-500/5 border border-violet-500/20">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-2xl font-bold shadow-xl shadow-violet-500/20">F</div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Forge Protocol</h3>
+                    <p className="text-xs text-zinc-500">ERC-8004 Registered Autonomous Agent</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <InfoRow label="ERC-8004 Agent ID" value={`#${wallet?.erc8004AgentId ?? 2221}`} accent />
+                  <InfoRow label="Synthesis Agent ID" value={`#${wallet?.synthesisAgentId ?? 35843}`} accent />
+                  <InfoRow label="Operator Wallet" value={wallet?.address ?? "..."} mono />
+                  <InfoRow label="Chain" value="Ethereum Sepolia (11155111)" />
+                  <InfoRow label="Balance" value={`${wallet?.balance ?? "0"} ETH`} />
+                  <InfoRow label="Trust Gate" value="Verified (ownerOf)" accent />
+                </div>
+                <div className="mt-4 pt-4 border-t border-violet-500/10 space-y-2">
+                  <h4 className="text-xs font-semibold text-zinc-500 uppercase">On-Chain Proof</h4>
+                  <TxLink label="Identity Registration" hash={wallet?.identityTx ?? "0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab"} />
+                  <TxLink label="Reputation Feedback" hash={wallet?.reputationTx ?? "0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929"} />
+                </div>
+              </div>
+              <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
+                <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-3">Agent Capabilities</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {["security_audit", "semgrep_sast", "cve_scanning", "code_analysis", "fix_generation", "pr_creation", "trust_gating", "x402_payments", "reputation_tracking", "self_correction"].map(cap => (
+                    <span key={cap} className="px-2 py-1 rounded-md text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-mono">{cap}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : !run && !isRunning ? (
             /* Empty State */
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="flex gap-3 mb-8">
@@ -674,78 +745,6 @@ export default function Dashboard() {
                   </div>
                 );
               })}
-            </div>
-          ) : activeTab === "identity" ? (
-            <div className="max-w-2xl mx-auto space-y-4">
-              <div className="p-6 rounded-xl bg-gradient-to-br from-violet-500/5 to-blue-500/5 border border-violet-500/20">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-2xl font-bold shadow-xl shadow-violet-500/20">F</div>
-                  <div>
-                    <h3 className="text-lg font-semibold">Forge Protocol</h3>
-                    <p className="text-xs text-zinc-500">ERC-8004 Registered Autonomous Agent</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <InfoRow label="ERC-8004 Agent ID" value={`#${wallet?.erc8004AgentId ?? 2221}`} accent />
-                  <InfoRow label="Synthesis Agent ID" value={`#${wallet?.synthesisAgentId ?? 35843}`} accent />
-                  <InfoRow label="Operator Wallet" value={wallet?.address ?? "..."} mono />
-                  <InfoRow label="Chain" value="Ethereum Sepolia (11155111)" />
-                  <InfoRow label="Balance" value={`${wallet?.balance ?? "0"} ETH`} />
-                  <InfoRow label="Trust Gate" value="Verified (ownerOf)" accent />
-                </div>
-                <div className="mt-4 pt-4 border-t border-violet-500/10 space-y-2">
-                  <h4 className="text-xs font-semibold text-zinc-500 uppercase">On-Chain Proof</h4>
-                  <TxLink label="Identity Registration" hash={wallet?.identityTx ?? "0xadf3b56f10b60f40ca7a7973749c9612fd9ed5b0d160a45223e7ae5eb5c9a2ab"} />
-                  <TxLink label="Reputation Feedback" hash={wallet?.reputationTx ?? "0x96b4ae35ec3d52657f3be1bf135cac24da1b344055eac7196c697daf4ec99929"} />
-                </div>
-              </div>
-              <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800/50">
-                <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-3">Agent Capabilities</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {["security_audit", "semgrep_sast", "cve_scanning", "code_analysis", "fix_generation", "pr_creation", "trust_gating", "x402_payments", "reputation_tracking", "self_correction"].map(cap => (
-                    <span key={cap} className="px-2 py-1 rounded-md text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-mono">{cap}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : activeTab === "history" ? (
-            <div className="max-w-2xl mx-auto space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Audit History</h3>
-                <span className="text-[10px] text-zinc-600">{runHistory.length} runs</span>
-              </div>
-              {runHistory.length === 0 ? (
-                <div className="text-center py-12 text-zinc-600 text-sm">No audit history yet. Run an analysis to see results here.</div>
-              ) : (
-                runHistory.map((h, i) => (
-                  <div key={i} className={`p-4 rounded-xl border transition-all ${h.prUrl ? "bg-blue-500/5 border-blue-500/20 hover:border-blue-500/30" : "bg-zinc-900/50 border-zinc-800/50 hover:border-zinc-700/50"}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-zinc-300 truncate flex-1">{h.repo.replace("https://github.com/", "")}</span>
-                      <span className="text-[10px] text-zinc-600 shrink-0 ml-3">{new Date(h.date).toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs mb-2">
-                      <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">{h.findings} findings</span>
-                      {h.critical > 0 && <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-400">{h.critical} critical</span>}
-                    </div>
-                    {h.prUrl ? (
-                      <a href={h.prUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-xs">
-                        <span>&#9998;</span>
-                        <span className="font-medium">View Security Audit PR</span>
-                        <span className="ml-auto">&#8599;</span>
-                      </a>
-                    ) : (
-                      <div className="text-[10px] text-zinc-600">No PR created for this audit</div>
-                    )}
-                  </div>
-                ))
-              )}
-              {runHistory.length > 0 && (
-                <button onClick={() => { setRunHistory([]); localStorage.removeItem("forge-history"); }}
-                  className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
-                  Clear history
-                </button>
-              )}
             </div>
           ) : null}
         </div>
