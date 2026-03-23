@@ -296,8 +296,8 @@ export default function Dashboard() {
                 <div className={`px-3 py-1.5 rounded-lg font-medium ${run.status === "running" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : run.status === "completed" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
                   {run.status === "running" ? "ANALYZING" : run.status.toUpperCase()}
                 </div>
-                <button onClick={clearSession} className="px-2 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors" title="Clear Session">
-                  &#10005;
+                <button onClick={clearSession} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 border border-zinc-700 transition-colors">
+                  New Audit
                 </button>
               </div>
             )}
