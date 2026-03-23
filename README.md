@@ -11,17 +11,23 @@ Forge Protocol is a fully autonomous system that discovers, analyzes, and fixes 
 
 ## Why This Exists
 
-Automated security auditing today has a trust problem. Tools like Semgrep and CodeQL find real bugs, but they can't reason about business logic, understand context, or propose fixes. LLM-based tools can reason, but hallucinate vulnerabilities and have no accountability. Nobody can verify whether an automated auditor is actually reliable.
+Free tools exist for security scanning. Semgrep, CodeQL, Snyk, Dependabot — a developer can add these to CI and catch known vulnerability patterns. But three problems remain unsolved:
 
-Forge Protocol solves this by combining the best of both worlds:
+1. **No accountability.** When an automated tool reports (or misses) a vulnerability, there's no way to verify the tool's track record. A tool that hallucinates findings and a tool that catches real bugs look identical until something breaks in production.
 
-1. **Deterministic tools** (Semgrep, custom SAST, CVE databases) provide ground truth
-2. **AI agents** (Claude) provide contextual reasoning, deep analysis, and fix generation
-3. **ERC-8004 on-chain identity** creates verifiable, accountable auditor reputation
-4. **Trust-gating** ensures agents verify each other before accepting results
-5. **x402 micropayments** enable agent-to-agent commerce for audit services
+2. **No contextual reasoning.** SAST tools match patterns. They can't understand business logic, evaluate whether a "vulnerability" is actually exploitable in context, or propose fixes that preserve the code's intent.
 
-The result: a multi-agent system where every finding is backed by real tooling, every agent is accountable on-chain, and every audit builds verifiable reputation.
+3. **No autonomous operation.** Existing tools require human setup, configuration, triage, and remediation. The gap between "tool finds a bug" and "bug gets fixed" is weeks to months.
+
+Forge Protocol closes all three gaps:
+
+- **On-chain accountability via ERC-8004.** Every audit builds verifiable reputation. Agent #2221's identity, every reputation score, and every audit attestation are recorded on Ethereum Sepolia — permanently, transparently, cryptographically signed. A developer can check an auditor's track record before trusting its findings.
+
+- **Hybrid deterministic + AI analysis.** Semgrep and custom SAST provide ground truth. Claude provides contextual reasoning. CVE databases provide known vulnerability data. The combination catches what either approach alone would miss.
+
+- **Full autonomy with self-correction.** Give it a repo URL. The Orchestrator plans, Scanner scans with real tools, Analyzer performs deep CWE analysis, Fixer generates patches, Reviewer validates — and if the Reviewer rejects, the Fixer automatically retries. No human in the loop.
+
+**No production system combines these three capabilities.** Autonomous security auditing with on-chain identity and verifiable reputation does not exist in the current tooling landscape.
 
 ---
 
